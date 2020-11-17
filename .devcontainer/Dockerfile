@@ -10,3 +10,9 @@ RUN if [ "${INSTALL_NODE}" = "true" ]; then su vscode -c "source /usr/local/shar
 # Install additional OS packages.
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 #     && apt-get -y install --no-install-recommends ...
+
+# Install goreleaser
+RUN wget https://github.com/goreleaser/goreleaser/releases/download/v0.147.2/goreleaser_amd64.deb \
+        -O /tmp/goreleaser_amd64.deb \
+    && dpkg -i /tmp/goreleaser_amd64.deb \
+    && rm -f /tmp/goreleaser_amd64.deb
