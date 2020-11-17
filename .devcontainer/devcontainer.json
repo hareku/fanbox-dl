@@ -1,0 +1,46 @@
+// For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.137.0/containers/go
+{
+	"name": "Go",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"args": {
+			// Update the VARIANT arg to pick a version of Go: 1, 1.15, 1.14
+			"VARIANT": "1.15",
+			// Options
+			"INSTALL_NODE": "false",
+			"NODE_VERSION": "lts/*"
+		}
+	},
+	"runArgs": [
+        "--cap-add=SYS_ADMIN",
+        "--security-opt", "seccomp=unconfined",
+        "-v", "/var/run/docker.sock:/var/run/docker.sock"
+    ],
+
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"terminal.integrated.shell.linux": "/bin/bash",
+		"go.useGoProxyToCheckForToolUpdates": false,
+		"go.gopath": "/go",
+        "go.useLanguageServer": true,
+        "go.toolsEnvVars": {
+            "GO111MODULE": "on"
+        }
+	},
+
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+        "golang.Go",
+        "EditorConfig.EditorConfig"
+	],
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "go version",
+
+	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
+	// "remoteUser": "vscode"
+}
