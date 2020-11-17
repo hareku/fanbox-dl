@@ -99,6 +99,7 @@ func (c *Client) request(ctx context.Context, url string) (*http.Response, error
 	}
 
 	req.Header.Set("Cookie", fmt.Sprintf("FANBOXSESSID=%s", c.FANBOXSESSID))
+	// If Origin header is not set, FANBOX returns HTTP 400 error.
 	req.Header.Set("Origin", "https://www.fanbox.cc")
 
 	resp, err := client.Do(req)
@@ -124,7 +125,8 @@ func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, im
 			break
 		}
 
-		// Not retryable error
+		// HTTP body often disconnects and returns error io.ErrUnexpectedEOF.
+		// But if err is not io.ErrUnexpectedEOF, stop the retrying.
 		if !errors.Is(err, io.ErrUnexpectedEOF) {
 			break
 		}
