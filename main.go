@@ -20,22 +20,22 @@ func main() {
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:     "user",
-			Usage:    "Pixiv user ID, don't prepend @",
+			Usage:    "Pixiv user ID to download, don't prepend @",
 			Required: true,
 		},
 		&cli.StringFlag{
 			Name:     "sessid",
-			Usage:    "FANBOXSESSID",
+			Usage:    "FANBOXSESSID which is stored in Cookies",
 			Required: true,
 		},
 		&cli.StringFlag{
 			Name:  "save-dir",
-			Usage: "Directory for save images. default './images/[user]'",
+			Usage: "Directory for save images. (default './images/[user]')",
 		},
 		&cli.BoolFlag{
 			Name:  "dir-by-post",
 			Value: false,
-			Usage: "Whether to separate directories for each post",
+			Usage: "Whether to separate save directories for each post",
 		},
 	}
 
