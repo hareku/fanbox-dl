@@ -18,12 +18,12 @@ func (c *Client) makeFileName(post api.Post, order int, img api.Image) string {
 	}
 
 	if c.SeparateByPost {
-		// [SaveDirectory]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
-		return filepath.Join(c.SaveDir, fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), post.Title), fmt.Sprintf("%d-%s.%s", order, img.ID, img.Extension))
+		// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
+		return filepath.Join(c.SaveDir, c.UserID, fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), post.Title), fmt.Sprintf("%d-%s.%s", order, img.ID, img.Extension))
 	}
 
-	// [SaveDirectory]/2006-01-02-[Post Title]-[Order]-[Image ID].[Image Extension]
-	return filepath.Join(c.SaveDir, fmt.Sprintf("%s-%s-%d-%s.%s", date.UTC().Format("2006-01-02"), post.Title, order, img.ID, img.Extension))
+	// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]-[Order]-[Image ID].[Image Extension]
+	return filepath.Join(c.SaveDir, c.UserID, fmt.Sprintf("%s-%s-%d-%s.%s", date.UTC().Format("2006-01-02"), post.Title, order, img.ID, img.Extension))
 }
 
 func (c *Client) saveFile(name string, resp *http.Response) error {
