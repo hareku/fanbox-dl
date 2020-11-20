@@ -11,6 +11,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+func init() {
+	log.SetOutput(os.Stdout)
+	log.SetPrefix("[fanbox-dl] ")
+}
+
 func main() {
 	app := &cli.App{
 		Name:  "fanboxdl",
