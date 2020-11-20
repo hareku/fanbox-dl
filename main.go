@@ -5,10 +5,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/hareku/fanbox-dl/pkg/download"
 	"github.com/urfave/cli/v2"
 )
+
+func init() {
+	log.SetOutput(os.Stdout)
+	log.SetPrefix("[fanbox-dl] ")
+}
 
 func main() {
 	app := &cli.App{
@@ -50,8 +56,8 @@ func main() {
 	}
 
 	app.Action = func(c *cli.Context) error {
-		fmt.Println("Launching Pixiv FANBOX Downloader!")
-		fmt.Printf("Input User ID: %s\n", c.String("user"))
+		log.Print("Launching Pixiv FANBOX Downloader!")
+		log.Printf("Input User ID: %q", c.String("user"))
 
 		client := download.Client{
 			UserID:         c.String("user"),
@@ -68,11 +74,12 @@ func main() {
 		return nil
 	}
 
+	start := time.Now()
 	ctx := context.Background()
 	err := app.RunContext(ctx, os.Args)
 	if err != nil {
-		log.Fatalf("Pixiv FANBOX Downloader failed: %s\n", err)
+		log.Fatalf("Pixiv FANBOX Downloader failed: %s", err)
 	}
-	log.Println("Pixiv FANBOX Downloader completed.")
+	log.Printf("Completed (after %v).", time.Now().Sub(start))
 	os.Exit(0)
 }
