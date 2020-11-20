@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hareku/fanbox-dl/internal/download"
+	"github.com/hareku/fanbox-dl/pkg/download"
 	"github.com/urfave/cli/v2"
 )
 
