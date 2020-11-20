@@ -70,7 +70,8 @@ func main() {
 	ctx := context.Background()
 	err := app.RunContext(ctx, os.Args)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Pixiv FANBOX Downloader failed: %s\n", err)
 	}
+	log.Println("Pixiv FANBOX Downloader completed.")
 	os.Exit(0)
 }
