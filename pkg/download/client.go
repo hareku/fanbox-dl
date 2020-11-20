@@ -91,18 +91,7 @@ func (c *Client) buildFirstURL() string {
 
 // request sends GET request with credentials.
 func (c *Client) request(ctx context.Context, url string) (*http.Response, error) {
-	client := http.Client{}
-
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("http request building error: %w", err)
-	}
-
-	req.Header.Set("Cookie", fmt.Sprintf("FANBOXSESSID=%s", c.FANBOXSESSID))
-	// If Origin header is not set, FANBOX returns HTTP 400 error.
-	req.Header.Set("Origin", "https://www.fanbox.cc")
-
-	resp, err := client.Do(req)
+	resp, err := api.Request(ctx, c.FANBOXSESSID, url)
 	if err != nil {
 		return nil, fmt.Errorf("http request error: %w", err)
 	}
