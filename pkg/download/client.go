@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/hareku/fanbox-dl/pkg/api"
 )
 
 // Client is the client which downloads images from FANBOX.
@@ -41,7 +43,7 @@ func (c *Client) Run(ctx context.Context) error {
 			return fmt.Errorf("status code is %d, response body: %s", resp.StatusCode, body)
 		}
 
-		var content ListCreator
+		var content api.ListCreator
 		err = json.Unmarshal(body, &content)
 		if err != nil {
 			return fmt.Errorf("json unmarshal error: %w", err)
@@ -53,7 +55,7 @@ func (c *Client) Run(ctx context.Context) error {
 				continue
 			}
 
-			var images []Image
+			var images []api.Image
 			if post.Body.Images != nil {
 				images = *post.Body.Images
 			}
@@ -108,7 +110,7 @@ func (c *Client) request(ctx context.Context, url string) (*http.Response, error
 	return resp, nil
 }
 
-func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, img Image) error {
+func (c *Client) downloadWithRetry(ctx context.Context, post api.Post, order int, img api.Image) error {
 	const maxRetry = 5
 	retry := 0
 	var err error
@@ -140,7 +142,7 @@ func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, im
 	return nil
 }
 
-func (c *Client) download(ctx context.Context, post Post, order int, img Image) error {
+func (c *Client) download(ctx context.Context, post api.Post, order int, img api.Image) error {
 	name := c.makeFileName(post, order, img)
 
 	if c.isDownloaded(name) {

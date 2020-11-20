@@ -1,4 +1,4 @@
-package download
+package api
 
 // ListCreator is the response of https://api.fanbox.cc/post.listCreator.
 type ListCreator struct {

@@ -7,9 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/hareku/fanbox-dl/pkg/api"
 )
 
-func (c *Client) makeFileName(post Post, order int, img Image) string {
+func (c *Client) makeFileName(post api.Post, order int, img api.Image) string {
 	date, err := time.Parse(time.RFC3339, post.PublishedDateTime)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse post published date time %s: %w", post.PublishedDateTime, err))
