@@ -143,11 +143,6 @@ func (c *Client) downloadWithRetry(ctx context.Context, post api.Post, order int
 func (c *Client) download(ctx context.Context, post api.Post, order int, img api.Image) error {
 	name := c.makeFileName(post, order, img)
 
-	if c.isDownloaded(name) {
-		log.Printf("Already downloaded %dth file of %s\n", order, post.Title)
-		return nil
-	}
-
 	log.Printf("Downloading %dth file of %s\n", order, post.Title)
 
 	resp, err := c.request(ctx, img.OriginalURL)
