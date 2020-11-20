@@ -7,5 +7,5 @@ merge:
 	git checkout develop;
 	git push origin develop;
 	git checkout main;
-	git merge --no-ff develop;
+	git merge --no-ff --no-edit develop;
 	git push origin main

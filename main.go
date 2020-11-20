@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/hareku/fanbox-dl/pkg/download"
 	"github.com/urfave/cli/v2"
@@ -30,7 +29,8 @@ func main() {
 		},
 		&cli.StringFlag{
 			Name:  "save-dir",
-			Usage: "Directory for save images. (default './images/[user]')",
+			Value: "./images",
+			Usage: "Directory for save images.",
 		},
 		&cli.BoolFlag{
 			Name:  "dir-by-post",
@@ -42,23 +42,24 @@ func main() {
 			Value: false,
 			Usage: "Whether to check all posts.",
 		},
+		&cli.BoolFlag{
+			Name:  "dry-run",
+			Value: false,
+			Usage: "Whether to dry-run (not download images).",
+		},
 	}
 
 	app.Action = func(c *cli.Context) error {
 		fmt.Println("Launching Pixiv FANBOX Downloader!")
 		fmt.Printf("Input User ID: %s\n", c.String("user"))
 
-		saveDir := c.String("save-dir")
-		if saveDir == "" {
-			saveDir = filepath.Join("./images", c.String("user"))
-		}
-
 		client := download.Client{
 			UserID:         c.String("user"),
-			SaveDir:        saveDir,
+			SaveDir:        c.String("save-dir"),
 			FANBOXSESSID:   c.String("sessid"),
 			SeparateByPost: c.Bool("dir-by-post"),
 			CheckAllPosts:  c.Bool("all"),
+			DryRun:         c.Bool("dry-run"),
 		}
 		err := client.Run(c.Context)
 		if err != nil {
