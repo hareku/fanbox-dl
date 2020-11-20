@@ -42,6 +42,11 @@ func main() {
 			Value: false,
 			Usage: "Whether to check all posts.",
 		},
+		&cli.BoolFlag{
+			Name:  "dry-run",
+			Value: false,
+			Usage: "Whether to dry-run (not download images).",
+		},
 	}
 
 	app.Action = func(c *cli.Context) error {
@@ -54,6 +59,7 @@ func main() {
 			FANBOXSESSID:   c.String("sessid"),
 			SeparateByPost: c.Bool("dir-by-post"),
 			CheckAllPosts:  c.Bool("all"),
+			DryRun:         c.Bool("dry-run"),
 		}
 		err := client.Run(c.Context)
 		if err != nil {

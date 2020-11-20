@@ -22,6 +22,7 @@ type Client struct {
 	FANBOXSESSID   string
 	SeparateByPost bool
 	CheckAllPosts  bool
+	DryRun         bool
 }
 
 // Run downloads images.
@@ -142,6 +143,10 @@ func (c *Client) downloadWithRetry(ctx context.Context, post api.Post, order int
 
 func (c *Client) download(ctx context.Context, post api.Post, order int, img api.Image) error {
 	name := c.makeFileName(post, order, img)
+	if c.DryRun {
+		log.Printf("[dry-run] Client will download %dth file of %q.\n", order, post.Title)
+		return nil
+	}
 
 	log.Printf("Downloading %dth file of %s\n", order, post.Title)
 
