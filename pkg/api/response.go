@@ -56,3 +56,20 @@ func (b *PostBody) OrderedImageMap() []Image {
 
 	return images
 }
+
+// ListSupporting is the response of https://api.fanbox.cc/post.listSupporting.
+type ListSupporting struct {
+	Body []Plan `json:"body"`
+}
+
+// Plan represents a plan of creators.
+type Plan struct {
+	CreatorID string `json:"creatorId"`
+	User      User   `json:"user"`
+}
+
+// User represents a user information.
+type User struct {
+	UserID string `json:"userId"`
+	Name   string `json:"name"`
+}
