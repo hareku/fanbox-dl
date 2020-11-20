@@ -21,6 +21,7 @@ type Client struct {
 	SaveDir        string
 	FANBOXSESSID   string
 	SeparateByPost bool
+	CheckAllPosts  bool
 }
 
 // Run downloads images.
@@ -51,7 +52,7 @@ func (c *Client) Run(ctx context.Context) error {
 
 		for _, post := range content.Body.Items {
 			if post.Body == nil {
-				log.Printf("Skipping an unauthorized post: %s", post.Title)
+				log.Printf("Skipping an unauthorized post: %q.\n", post.Title)
 				continue
 			}
 
@@ -64,6 +65,14 @@ func (c *Client) Run(ctx context.Context) error {
 			}
 
 			for order, img := range images {
+				if c.isDownloaded(c.makeFileName(post, order, img)) {
+					log.Printf("Already downloaded %dth file of %q.\n", order, post.Title)
+					if !c.CheckAllPosts {
+						log.Println("No more new images.")
+						return nil
+					}
+				}
+
 				err = c.downloadWithRetry(ctx, post, order, img)
 				if err != nil {
 					return fmt.Errorf("download error: %w", err)

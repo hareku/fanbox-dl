@@ -37,6 +37,11 @@ func main() {
 			Value: false,
 			Usage: "Whether to separate save directories for each post",
 		},
+		&cli.BoolFlag{
+			Name:  "all",
+			Value: false,
+			Usage: "Whether to check all posts.",
+		},
 	}
 
 	app.Action = func(c *cli.Context) error {
@@ -53,6 +58,7 @@ func main() {
 			SaveDir:        saveDir,
 			FANBOXSESSID:   c.String("sessid"),
 			SeparateByPost: c.Bool("dir-by-post"),
+			CheckAllPosts:  c.Bool("all"),
 		}
 		err := client.Run(c.Context)
 		if err != nil {
