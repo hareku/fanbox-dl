@@ -6,10 +6,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/hareku/fanbox-dl/pkg/api"
 )
+
+var invalidFileChar = regexp.MustCompile(`[\/:*?"<>|]`)
 
 func (c *Client) makeFileName(post api.Post, order int, img api.Image) string {
 	date, err := time.Parse(time.RFC3339, post.PublishedDateTime)
@@ -17,13 +20,15 @@ func (c *Client) makeFileName(post api.Post, order int, img api.Image) string {
 		panic(fmt.Errorf("failed to parse post published date time %s: %w", post.PublishedDateTime, err))
 	}
 
+	title := invalidFileChar.ReplaceAllString(post.Title, "-")
+
 	if c.SeparateByPost {
 		// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
-		return filepath.Join(c.SaveDir, c.UserID, fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), post.Title), fmt.Sprintf("%d-%s.%s", order, img.ID, img.Extension))
+		return filepath.Join(c.SaveDir, c.UserID, fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), title), fmt.Sprintf("%d-%s.%s", order, img.ID, img.Extension))
 	}
 
 	// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]-[Order]-[Image ID].[Image Extension]
-	return filepath.Join(c.SaveDir, c.UserID, fmt.Sprintf("%s-%s-%d-%s.%s", date.UTC().Format("2006-01-02"), post.Title, order, img.ID, img.Extension))
+	return filepath.Join(c.SaveDir, c.UserID, fmt.Sprintf("%s-%s-%d-%s.%s", date.UTC().Format("2006-01-02"), title, order, img.ID, img.Extension))
 }
 
 func (c *Client) saveFile(name string, resp *http.Response) error {
@@ -55,11 +60,14 @@ func (c *Client) saveFile(name string, resp *http.Response) error {
 	return nil
 }
 
-func (c *Client) isDownloaded(name string) bool {
+func (c *Client) isDownloaded(name string) (bool, error) {
 	_, err := os.Stat(name)
 	if os.IsNotExist(err) {
-		return false
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("failed to stat file: %w", err)
 	}
 
-	return true
+	return true, nil
 }

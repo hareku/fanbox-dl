@@ -66,7 +66,12 @@ func (c *Client) Run(ctx context.Context) error {
 			}
 
 			for order, img := range images {
-				if c.isDownloaded(c.makeFileName(post, order, img)) {
+				downloaded, err := c.isDownloaded(c.makeFileName(post, order, img))
+				if err != nil {
+					return fmt.Errorf("failed to check whether does file exist: %w", err)
+				}
+
+				if downloaded {
 					log.Printf("Already downloaded %dth file of %q.\n", order, post.Title)
 					if !c.CheckAllPosts {
 						log.Println("No more new images.")
