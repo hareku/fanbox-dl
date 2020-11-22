@@ -55,11 +55,14 @@ func (c *Client) saveFile(name string, resp *http.Response) error {
 	return nil
 }
 
-func (c *Client) isDownloaded(name string) bool {
+func (c *Client) isDownloaded(name string) (bool, error) {
 	_, err := os.Stat(name)
 	if os.IsNotExist(err) {
-		return false
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("failed to stat file: %w", err)
 	}
 
-	return true
+	return true, nil
 }
