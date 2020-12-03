@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/hareku/fanbox-dl/pkg/download"
+	"github.com/hareku/fanbox-dl/pkg/fanbox"
 	"github.com/urfave/cli/v2"
 )
 
@@ -59,7 +59,7 @@ func main() {
 		log.Print("Launching Pixiv FANBOX Downloader!")
 		log.Printf("Input User ID: %q", c.String("user"))
 
-		client := download.Client{
+		client := fanbox.Client{
 			UserID:         c.String("user"),
 			SaveDir:        c.String("save-dir"),
 			FANBOXSESSID:   c.String("sessid"),

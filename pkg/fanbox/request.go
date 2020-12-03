@@ -1,4 +1,4 @@
-package api
+package fanbox
 
 import (
 	"context"

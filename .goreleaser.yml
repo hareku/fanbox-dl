@@ -23,7 +23,6 @@ snapshot:
   name_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
+archives:
+  - files:
+    - none*

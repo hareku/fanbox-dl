@@ -1,4 +1,4 @@
-package download
+package fanbox
 
 import (
 	"context"
@@ -11,11 +11,9 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/hareku/fanbox-dl/pkg/api"
 )
 
-// Client is the client which downloads images from FANBOX.
+// Client is the client which downloads images from
 type Client struct {
 	UserID         string
 	SaveDir        string
@@ -45,7 +43,7 @@ func (c *Client) Run(ctx context.Context) error {
 			return fmt.Errorf("status code is %d, response body: %s", resp.StatusCode, body)
 		}
 
-		var content api.ListCreator
+		var content ListCreator
 		err = json.Unmarshal(body, &content)
 		if err != nil {
 			return fmt.Errorf("json unmarshal error: %w", err)
@@ -57,7 +55,7 @@ func (c *Client) Run(ctx context.Context) error {
 				continue
 			}
 
-			var images []api.Image
+			var images []Image
 			if post.Body.Images != nil {
 				images = *post.Body.Images
 			}
@@ -101,12 +99,12 @@ func (c *Client) buildFirstURL() string {
 	params.Set("creatorId", c.UserID)
 	params.Set("limit", "50")
 
-	return fmt.Sprintf("https://api.fanbox.cc/post.listCreator?%s", params.Encode())
+	return fmt.Sprintf("https://cc/post.listCreator?%s", params.Encode())
 }
 
 // request sends GET request with credentials.
 func (c *Client) request(ctx context.Context, url string) (*http.Response, error) {
-	resp, err := api.Request(ctx, c.FANBOXSESSID, url)
+	resp, err := Request(ctx, c.FANBOXSESSID, url)
 	if err != nil {
 		return nil, fmt.Errorf("http request error: %w", err)
 	}
@@ -114,7 +112,7 @@ func (c *Client) request(ctx context.Context, url string) (*http.Response, error
 	return resp, nil
 }
 
-func (c *Client) downloadWithRetry(ctx context.Context, post api.Post, order int, img api.Image) error {
+func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, img Image) error {
 	const maxRetry = 5
 	retry := 0
 	var err error
@@ -146,7 +144,7 @@ func (c *Client) downloadWithRetry(ctx context.Context, post api.Post, order int
 	return nil
 }
 
-func (c *Client) download(ctx context.Context, post api.Post, order int, img api.Image) error {
+func (c *Client) download(ctx context.Context, post Post, order int, img Image) error {
 	name := c.makeFileName(post, order, img)
 	if c.DryRun {
 		log.Printf("[dry-run] Client will download %dth file of %q.\n", order, post.Title)
