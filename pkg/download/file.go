@@ -21,7 +21,7 @@ func (c *Client) makeFileName(post api.Post, order int, img api.Image) string {
 		panic(fmt.Errorf("failed to parse post published date time %s: %w", post.PublishedDateTime, err))
 	}
 
-	title := filename.EscapeString(post.Title)
+	title := filename.EscapeString(post.Title, "-")
 
 	if c.SeparateByPost {
 		// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
