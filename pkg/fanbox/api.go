@@ -1,6 +1,6 @@
 package fanbox
 
-// ListCreator is the response of https://api.fanbox.cc/post.listCreator.
+// ListCreator represents the response of https://api.fanbox.cc/post.listCreator.
 type ListCreator struct {
 	Body ListCreatorBody `json:"body"`
 }
@@ -19,7 +19,7 @@ type Post struct {
 	Body              *PostBody `json:"body"`
 }
 
-// PostBody contains the body of a post.
+// PostBody represents a post's body.
 type PostBody struct {
 	Blocks   *[]Block          `json:"blocks"`
 	Images   *[]Image          `json:"images"`
