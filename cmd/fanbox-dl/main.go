@@ -67,19 +67,21 @@ func main() {
 			CheckAllPosts:  c.Bool("all"),
 			DryRun:         c.Bool("dry-run"),
 		}
+
+		start := time.Now()
 		err := client.Run(c.Context)
 		if err != nil {
 			return fmt.Errorf("download error: %w", err)
 		}
+
+		log.Printf("Completed (after %v).", time.Now().Sub(start))
 		return nil
 	}
 
-	start := time.Now()
 	ctx := context.Background()
 	err := app.RunContext(ctx, os.Args)
 	if err != nil {
 		log.Fatalf("Pixiv FANBOX Downloader failed: %s", err)
 	}
-	log.Printf("Completed (after %v).", time.Now().Sub(start))
 	os.Exit(0)
 }
