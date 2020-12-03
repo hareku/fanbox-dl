@@ -6,13 +6,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"time"
 
 	"github.com/hareku/filename"
 )
-
-var invalidFileChar = regexp.MustCompile(`[\/:*?"<>|]`)
 
 func (c *Client) makeFileName(post Post, order int, img Image) string {
 	date, err := time.Parse(time.RFC3339, post.PublishedDateTime)
