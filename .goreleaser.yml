@@ -11,6 +11,8 @@ builds:
       - windows
       - darwin
 archives:
+  - files:
+    - none*
   - replacements:
       darwin: Darwin
       linux: Linux
@@ -23,6 +25,3 @@ snapshot:
   name_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
-archives:
-  - files:
-    - none*
