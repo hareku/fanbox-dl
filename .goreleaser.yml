@@ -11,14 +11,14 @@ builds:
       - windows
       - darwin
 archives:
-  - files:
-    - none*
   - replacements:
       darwin: Darwin
       linux: Linux
       windows: Windows
       386: i386
       amd64: x86_64
+    files:
+      - none*
 checksum:
   name_template: 'checksums.txt'
 snapshot:
