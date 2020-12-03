@@ -1,6 +1,12 @@
 package fanbox
 
-// ListCreator is the response of https://api.fanbox.cc/post.listCreator.
+import (
+	"context"
+	"fmt"
+	"net/http"
+)
+
+// ListCreator represents the response of https://api.fanbox.cc/post.listCreator.
 type ListCreator struct {
 	Body ListCreatorBody `json:"body"`
 }
@@ -19,7 +25,8 @@ type Post struct {
 	Body              *PostBody `json:"body"`
 }
 
-// PostBody contains the body of a post.
+// PostBody represents a post's body.
+// PostBody has "Images" or "Blocks and ImageMap".
 type PostBody struct {
 	Blocks   *[]Block          `json:"blocks"`
 	Images   *[]Image          `json:"images"`
@@ -39,7 +46,7 @@ type Image struct {
 	OriginalURL string `json:"originalUrl"`
 }
 
-// OrderedImageMap returns ordered image map by PostBody.Blocks.
+// OrderedImageMap returns ordered images in ImageMap by PostBody.Blocks order.
 func (b *PostBody) OrderedImageMap() []Image {
 	if b.ImageMap == nil || b.Blocks == nil {
 		return nil
@@ -55,4 +62,24 @@ func (b *PostBody) OrderedImageMap() []Image {
 	}
 
 	return images
+}
+
+// Request sends a request to FANBOX with credentials.
+func Request(ctx context.Context, sessid string, url string) (*http.Response, error) {
+	client := http.Client{}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("http request building error: %w", err)
+	}
+
+	req.Header.Set("Cookie", fmt.Sprintf("FANBOXSESSID=%s", sessid))
+	req.Header.Set("Origin", "https://www.fanbox.cc") // If Origin header is not set, FANBOX returns HTTP 400 error.
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("http response error: %w", err)
+	}
+
+	return resp, nil
 }

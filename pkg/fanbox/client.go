@@ -10,7 +10,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"time"
+
+	backoff "github.com/cenkalti/backoff/v4"
 )
 
 // Client is the client which downloads images from
@@ -99,7 +100,7 @@ func (c *Client) buildFirstURL() string {
 	params.Set("creatorId", c.UserID)
 	params.Set("limit", "50")
 
-	return fmt.Sprintf("https://cc/post.listCreator?%s", params.Encode())
+	return fmt.Sprintf("https://api.fanbox.cc/post.listCreator?%s", params.Encode())
 }
 
 // request sends GET request with credentials.
@@ -113,32 +114,26 @@ func (c *Client) request(ctx context.Context, url string) (*http.Response, error
 }
 
 func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, img Image) error {
-	const maxRetry = 5
-	retry := 0
-	var err error
-
-	for {
-		if retry >= maxRetry {
-			break
-		}
-
-		err = c.download(ctx, post, order, img)
+	operation := func() error {
+		err := c.download(ctx, post, order, img)
 		if err == nil {
-			break
+			return nil
 		}
 
-		// HTTP body often disconnects and returns error io.ErrUnexpectedEOF.
-		// But if err is not io.ErrUnexpectedEOF, stop the retrying.
-		if !errors.Is(err, io.ErrUnexpectedEOF) {
-			break
+		// HTTP body often disconnects while downloading and returns error io.ErrUnexpectedEOF.
+		// But other errors may be permanent error, so return and wrap it.
+		if errors.Is(err, io.ErrUnexpectedEOF) {
+			return err
 		}
 
-		time.Sleep(time.Second)
-		retry++
+		return backoff.Permanent(err)
 	}
 
+	strategy := backoff.WithContext(backoff.NewExponentialBackOff(), ctx)
+
+	err := backoff.Retry(operation, strategy)
 	if err != nil {
-		return fmt.Errorf("failed to download with retry %d times: %w", retry, err)
+		return fmt.Errorf("failed to download with retry: %w", err)
 	}
 
 	return nil
