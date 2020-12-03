@@ -99,7 +99,7 @@ func (c *Client) buildFirstURL() string {
 	params.Set("creatorId", c.UserID)
 	params.Set("limit", "50")
 
-	return fmt.Sprintf("https://cc/post.listCreator?%s", params.Encode())
+	return fmt.Sprintf("https://api.fanbox.cc/post.listCreator?%s", params.Encode())
 }
 
 // request sends GET request with credentials.
