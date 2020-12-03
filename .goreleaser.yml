@@ -2,7 +2,7 @@ before:
   hooks:
     - go mod download
 builds:
-  - main: ./cmd/main.go
+  - main: ./cmd/fanbox-dl/main.go
     env:
       - GO111MODULE=on
       - CGO_ENABLED=0
