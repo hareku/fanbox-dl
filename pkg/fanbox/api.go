@@ -20,6 +20,7 @@ type Post struct {
 }
 
 // PostBody represents a post's body.
+// PostBody has "Images" or "Blocks and ImageMap".
 type PostBody struct {
 	Blocks   *[]Block          `json:"blocks"`
 	Images   *[]Image          `json:"images"`
@@ -39,7 +40,7 @@ type Image struct {
 	OriginalURL string `json:"originalUrl"`
 }
 
-// OrderedImageMap returns ordered image map by PostBody.Blocks.
+// OrderedImageMap returns ordered images in ImageMap by PostBody.Blocks order.
 func (b *PostBody) OrderedImageMap() []Image {
 	if b.ImageMap == nil || b.Blocks == nil {
 		return nil
