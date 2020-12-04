@@ -25,12 +25,12 @@ func main() {
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:     "user",
-			Usage:    "Pixiv user ID to download, don't prepend @",
+			Usage:    "Pixiv user ID to download, don't prepend '@'.",
 			Required: true,
 		},
 		&cli.StringFlag{
 			Name:     "sessid",
-			Usage:    "FANBOXSESSID which is stored in Cookies",
+			Usage:    "FANBOXSESSID which is stored in Cookies.",
 			Required: true,
 		},
 		&cli.StringFlag{
@@ -41,12 +41,12 @@ func main() {
 		&cli.BoolFlag{
 			Name:  "dir-by-post",
 			Value: false,
-			Usage: "Whether to separate save directories for each post",
+			Usage: "Whether to separate save directories for each post.",
 		},
 		&cli.BoolFlag{
 			Name:  "all",
 			Value: false,
-			Usage: "Whether to check all posts.",
+			Usage: "Whether to check all posts. If -all=false, finish to download when found already downloaded image.",
 		},
 		&cli.BoolFlag{
 			Name:  "dry-run",
