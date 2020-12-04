@@ -29,7 +29,7 @@ GLOBAL OPTIONS:
    --sessid value    FANBOXSESSID which is stored in Cookies.
    --save-dir value  Directory for save images. (default: "./images")
    --dir-by-post     Whether to separate save directories for each post. (default: false)
-   --all             Whether to check all posts. If -all=false, finish to download when found already downloaded image. (default: false)
+   --all             Whether to check all posts. If --all=false, finish to download when found already downloaded image. (default: false)
    --dry-run         Whether to dry-run (not download images). (default: false)
    --help, -h        show help (default: false)
 ```
