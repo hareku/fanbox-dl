@@ -18,7 +18,7 @@ func init() {
 
 func main() {
 	app := &cli.App{
-		Name:  "fanboxdl",
+		Name:  "fanbox-dl",
 		Usage: "Downloads all posted original images of the specified user.",
 	}
 
