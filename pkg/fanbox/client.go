@@ -2,13 +2,10 @@ package fanbox
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
-	"net/http"
 	"net/url"
 
 	backoff "github.com/cenkalti/backoff/v4"
@@ -29,25 +26,9 @@ func (c *Client) Run(ctx context.Context) error {
 	url := c.buildFirstURL()
 
 	for {
-		resp, err := c.request(ctx, url)
+		content, err := c.fetchListCreator(ctx, url)
 		if err != nil {
-			return fmt.Errorf("request error (%s): %w", url, err)
-		}
-		defer resp.Body.Close()
-
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("body reading error: %w", err)
-		}
-
-		if resp.StatusCode != 200 {
-			return fmt.Errorf("status code is %d, response body: %s", resp.StatusCode, body)
-		}
-
-		var content ListCreator
-		err = json.Unmarshal(body, &content)
-		if err != nil {
-			return fmt.Errorf("json unmarshal error: %w", err)
+			return fmt.Errorf("failed to fetch %q: %w", url, err)
 		}
 
 		for _, post := range content.Body.Items {
@@ -103,14 +84,27 @@ func (c *Client) buildFirstURL() string {
 	return fmt.Sprintf("https://api.fanbox.cc/post.listCreator?%s", params.Encode())
 }
 
-// request sends GET request with credentials.
-func (c *Client) request(ctx context.Context, url string) (*http.Response, error) {
-	resp, err := Request(ctx, c.FANBOXSESSID, url)
-	if err != nil {
-		return nil, fmt.Errorf("http request error: %w", err)
+// fetchListCreator fetches the ListCreator sturct by URL.
+func (c *Client) fetchListCreator(ctx context.Context, url string) (*ListCreator, error) {
+	var list ListCreator
+
+	operation := func() error {
+		err := RequestAsJSON(ctx, c.FANBOXSESSID, url, &list)
+		if err != nil {
+			return fmt.Errorf("failed to fetch ListCreator: %w", err)
+		}
+
+		return nil
 	}
 
-	return resp, nil
+	strategy := backoff.WithContext(backoff.NewExponentialBackOff(), ctx)
+
+	err := backoff.Retry(operation, strategy)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch ListCreator retry: %w", err)
+	}
+
+	return &list, nil
 }
 
 func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, img Image) error {
@@ -148,7 +142,7 @@ func (c *Client) download(ctx context.Context, post Post, order int, img Image) 
 
 	log.Printf("Downloading %dth file of %s\n", order, post.Title)
 
-	resp, err := c.request(ctx, img.OriginalURL)
+	resp, err := Request(ctx, c.FANBOXSESSID, img.OriginalURL)
 	if err != nil {
 		return fmt.Errorf("request error (%s): %w", img.OriginalURL, err)
 	}

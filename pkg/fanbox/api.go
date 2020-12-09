@@ -2,8 +2,11 @@ package fanbox
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"reflect"
 )
 
 // ListCreator represents the response of https://api.fanbox.cc/post.listCreator.
@@ -64,7 +67,7 @@ func (b *PostBody) OrderedImageMap() []Image {
 	return images
 }
 
-// Request sends a request to FANBOX with credentials.
+// Request sends a request to the specified FANBOX URL with credentials.
 func Request(ctx context.Context, sessid string, url string) (*http.Response, error) {
 	client := http.Client{}
 
@@ -82,4 +85,35 @@ func Request(ctx context.Context, sessid string, url string) (*http.Response, er
 	}
 
 	return resp, nil
+}
+
+// RequestAsJSON sends a request to the specified FANBOX URL with credentials,
+// and unmarshal the response body as the passed struct.
+func RequestAsJSON(ctx context.Context, sessid string, url string, v interface{}) error {
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return fmt.Errorf("v of RequestAsJSON should be a pointer")
+	}
+
+	resp, err := Request(ctx, sessid, url)
+	if err != nil {
+		return fmt.Errorf("http error: %w", err)
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("body reading error: %w", err)
+	}
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("status code is %d, response body: %s", resp.StatusCode, body)
+	}
+
+	err = json.Unmarshal(body, v)
+	if err != nil {
+		return fmt.Errorf("json unmarshal error: %w", err)
+	}
+
+	return nil
 }
