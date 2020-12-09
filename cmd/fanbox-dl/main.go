@@ -46,7 +46,7 @@ func main() {
 		&cli.BoolFlag{
 			Name:  "all",
 			Value: false,
-			Usage: "Whether to check all posts. If -all=false, finish to download when found already downloaded image.",
+			Usage: "Whether to check all posts. If --all=false, finish to download when found already downloaded image.",
 		},
 		&cli.BoolFlag{
 			Name:  "dry-run",

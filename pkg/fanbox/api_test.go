@@ -1,10 +1,8 @@
-package fanbox_test
+package fanbox
 
 import (
 	"reflect"
 	"testing"
-
-	"github.com/hareku/fanbox-dl/pkg/fanbox"
 )
 
 func stringPointer(str string) *string {
@@ -13,21 +11,21 @@ func stringPointer(str string) *string {
 
 func TestPostBody_OrderedImageMap(t *testing.T) {
 	type fields struct {
-		Blocks   *[]fanbox.Block
-		Images   *[]fanbox.Image
-		ImageMap *map[string]fanbox.Image
+		Blocks   *[]Block
+		Images   *[]Image
+		ImageMap *map[string]Image
 	}
 
 	tests := []struct {
 		name   string
 		fields fields
-		want   []fanbox.Image
+		want   []Image
 	}{
 		{
 			name: "sort images by blocks order",
 			fields: fields{
 				Images: nil,
-				Blocks: &[]fanbox.Block{
+				Blocks: &[]Block{
 					{
 						Type:    "image",
 						ImageID: stringPointer("first"),
@@ -37,7 +35,7 @@ func TestPostBody_OrderedImageMap(t *testing.T) {
 						ImageID: stringPointer("second"),
 					},
 				},
-				ImageMap: &map[string]fanbox.Image{
+				ImageMap: &map[string]Image{
 					"second": {
 						ID: "second_image",
 					},
@@ -46,7 +44,7 @@ func TestPostBody_OrderedImageMap(t *testing.T) {
 					},
 				},
 			},
-			want: []fanbox.Image{
+			want: []Image{
 				{
 					ID: "first_image",
 				},
@@ -58,7 +56,7 @@ func TestPostBody_OrderedImageMap(t *testing.T) {
 		{
 			name: "return nil if Blocks and ImageMap are nil",
 			fields: fields{
-				Images:   &[]fanbox.Image{},
+				Images:   &[]Image{},
 				Blocks:   nil,
 				ImageMap: nil,
 			},
@@ -67,7 +65,7 @@ func TestPostBody_OrderedImageMap(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := &fanbox.PostBody{
+			b := &PostBody{
 				Blocks:   tt.fields.Blocks,
 				Images:   tt.fields.Images,
 				ImageMap: tt.fields.ImageMap,
