@@ -11,7 +11,7 @@ import (
 	backoff "github.com/cenkalti/backoff/v4"
 )
 
-// Client is the client which downloads images from
+// Client is the client which downloads images from FANBOX.
 type Client struct {
 	UserID         string
 	SaveDir        string
@@ -28,7 +28,7 @@ func (c *Client) Run(ctx context.Context) error {
 	for {
 		content, err := c.fetchListCreator(ctx, url)
 		if err != nil {
-			return fmt.Errorf("failed to fetch %q: %w", url, err)
+			return fmt.Errorf("failed to list images of %q: %w", url, err)
 		}
 
 		for _, post := range content.Body.Items {
@@ -59,7 +59,7 @@ func (c *Client) Run(ctx context.Context) error {
 					}
 				}
 
-				err = c.downloadWithRetry(ctx, post, order, img)
+				err = c.downloadImageWithRetrying(ctx, post, order, img)
 				if err != nil {
 					return fmt.Errorf("download error: %w", err)
 				}
@@ -76,6 +76,7 @@ func (c *Client) Run(ctx context.Context) error {
 	return nil
 }
 
+// buildFirstURL builds the first page URL of /post.listCreator.
 func (c *Client) buildFirstURL() string {
 	params := url.Values{}
 	params.Set("creatorId", c.UserID)
@@ -84,42 +85,42 @@ func (c *Client) buildFirstURL() string {
 	return fmt.Sprintf("https://api.fanbox.cc/post.listCreator?%s", params.Encode())
 }
 
-// fetchListCreator fetches the ListCreator sturct by URL.
+// fetchListCreator fetches ListCreator by URL.
 func (c *Client) fetchListCreator(ctx context.Context, url string) (*ListCreator, error) {
 	var list ListCreator
 
 	operation := func() error {
 		err := RequestAsJSON(ctx, c.FANBOXSESSID, url, &list)
 		if err != nil {
-			return fmt.Errorf("failed to fetch ListCreator: %w", err)
+			return fmt.Errorf("failed to request ListCreator: %w", err)
 		}
 
 		return nil
 	}
-
 	strategy := backoff.WithContext(backoff.NewExponentialBackOff(), ctx)
 
 	err := backoff.Retry(operation, strategy)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch ListCreator retry: %w", err)
+		return nil, fmt.Errorf("failed to request ListCreator with retrying: %w", err)
 	}
 
 	return &list, nil
 }
 
-func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, img Image) error {
+func (c *Client) downloadImageWithRetrying(ctx context.Context, post Post, order int, img Image) error {
 	operation := func() error {
-		err := c.download(ctx, post, order, img)
+		err := c.downloadImage(ctx, post, order, img)
 		if err == nil {
 			return nil
 		}
 
-		// HTTP body often disconnects while downloading and returns error io.ErrUnexpectedEOF.
-		// But other errors may be permanent error, so return and wrap it.
+		// The HTTP body often disconnects while downloading, then returns error io.ErrUnexpectedEOF.
+		// It's retryable.
 		if errors.Is(err, io.ErrUnexpectedEOF) {
 			return err
 		}
 
+		// Other errors may be permanent error, so return and wrap it.
 		return backoff.Permanent(err)
 	}
 
@@ -127,13 +128,13 @@ func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, im
 
 	err := backoff.Retry(operation, strategy)
 	if err != nil {
-		return fmt.Errorf("failed to download with retry: %w", err)
+		return fmt.Errorf("failed to download with retrying: %w", err)
 	}
 
 	return nil
 }
 
-func (c *Client) download(ctx context.Context, post Post, order int, img Image) error {
+func (c *Client) downloadImage(ctx context.Context, post Post, order int, img Image) error {
 	name := c.makeFileName(post, order, img)
 	if c.DryRun {
 		log.Printf("[dry-run] Client will download %dth file of %q.\n", order, post.Title)
