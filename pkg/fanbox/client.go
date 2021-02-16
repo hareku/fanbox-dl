@@ -57,6 +57,7 @@ func (c *Client) Run(ctx context.Context) error {
 						log.Println("No more new images.")
 						return nil
 					}
+					continue
 				}
 
 				err = c.downloadImageWithRetrying(ctx, post, order, img)
