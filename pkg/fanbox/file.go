@@ -45,10 +45,12 @@ func (c *Client) saveFile(name string, resp *http.Response) error {
 
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
-		// Remove crashed file
-		errRemove := os.Remove(file.Name())
-		if errRemove != nil {
-			return fmt.Errorf("file copying error and couldn't remove a crashed file (%s): %w", file.Name(), errRemove)
+		// Remove the crashed file
+		fileName := file.Name()
+		file.Close()
+
+		if removeRrr := os.Remove(fileName); removeRrr != nil {
+			return fmt.Errorf("file copying error and couldn't remove a crashed file (%s): %w", file.Name(), removeRrr)
 		}
 
 		return fmt.Errorf("file copying error: %w", err)
