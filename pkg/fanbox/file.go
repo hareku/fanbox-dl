@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/hareku/filename"
+	"github.com/hareku/go-filename"
 )
 
 func (c *Client) makeFileName(post Post, order int, img Image) string {
