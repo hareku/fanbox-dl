@@ -6,10 +6,21 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
-	"github.com/hareku/filename"
+	"github.com/hareku/go-filename"
+	"github.com/hareku/go-strlimit"
 )
+
+func osSafeLimit(s string) string {
+	switch runtime.GOOS {
+	case "windows":
+		return strlimit.LimitRunesWithEnd(s, 210, "...")
+	default:
+		return strlimit.LimitBytesWithEnd(s, 250, "...")
+	}
+}
 
 func (c *Client) makeFileName(post Post, order int, img Image) string {
 	date, err := time.Parse(time.RFC3339, post.PublishedDateTime)
@@ -21,11 +32,11 @@ func (c *Client) makeFileName(post Post, order int, img Image) string {
 
 	if c.SeparateByPost {
 		// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
-		return filepath.Join(c.SaveDir, c.UserID, fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), title), fmt.Sprintf("%d-%s.%s", order, img.ID, img.Extension))
+		return filepath.Join(c.SaveDir, c.UserID, osSafeLimit(fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), title)), fmt.Sprintf("%d-%s.%s", order, img.ID, img.Extension))
 	}
 
 	// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]-[Order]-[Image ID].[Image Extension]
-	return filepath.Join(c.SaveDir, c.UserID, fmt.Sprintf("%s-%s-%d-%s.%s", date.UTC().Format("2006-01-02"), title, order, img.ID, img.Extension))
+	return filepath.Join(c.SaveDir, c.UserID, fmt.Sprintf("%s.%s", osSafeLimit(fmt.Sprintf("%s-%s-%d-%s", date.UTC().Format("2006-01-02"), title, order, img.ID)), img.Extension))
 }
 
 func (c *Client) saveFile(name string, resp *http.Response) error {
