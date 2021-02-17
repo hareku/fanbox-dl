@@ -2,9 +2,7 @@ package fanbox
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/url"
 
@@ -110,22 +108,10 @@ func (c *Client) fetchListCreator(ctx context.Context, url string) (*ListCreator
 
 func (c *Client) downloadImageWithRetrying(ctx context.Context, post Post, order int, img Image) error {
 	operation := func() error {
-		err := c.downloadImage(ctx, post, order, img)
-		if err == nil {
-			return nil
-		}
-
-		// The HTTP body often disconnects while downloading, then returns error io.ErrUnexpectedEOF.
-		// It's retryable.
-		if errors.Is(err, io.ErrUnexpectedEOF) {
-			return err
-		}
-
-		// Other errors may be permanent error, so return and wrap it.
-		return backoff.Permanent(err)
+		return c.downloadImage(ctx, post, order, img)
 	}
 
-	strategy := backoff.WithContext(backoff.NewExponentialBackOff(), ctx)
+	strategy := backoff.WithContext(backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5), ctx)
 
 	err := backoff.Retry(operation, strategy)
 	if err != nil {
