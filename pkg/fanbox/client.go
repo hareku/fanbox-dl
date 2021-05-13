@@ -22,6 +22,7 @@ type client struct {
 	separateByPost bool
 	checkAllPosts  bool
 	dryRun         bool
+	apiClient      ApiClient
 }
 
 // NewClientInput is the input of NewClient.
@@ -32,6 +33,8 @@ type NewClientInput struct {
 	SeparateByPost bool
 	CheckAllPosts  bool
 	DryRun         bool
+
+	ApiClient ApiClient
 }
 
 // NewClient return the new Client instance.
@@ -43,6 +46,7 @@ func NewClient(input *NewClientInput) Client {
 		separateByPost: input.SeparateByPost,
 		checkAllPosts:  input.CheckAllPosts,
 		dryRun:         input.DryRun,
+		apiClient:      input.ApiClient,
 	}
 }
 
@@ -116,7 +120,7 @@ func (c *client) fetchListCreator(ctx context.Context, url string) (*ListCreator
 	var list ListCreator
 
 	operation := func() error {
-		err := RequestAsJSON(ctx, c.sessionID, url, &list)
+		err := c.apiClient.RequestAsJSON(ctx, c.sessionID, url, &list)
 		if err != nil {
 			return fmt.Errorf("failed to request ListCreator: %w", err)
 		}
@@ -157,7 +161,7 @@ func (c *client) downloadImage(ctx context.Context, post Post, order int, img Im
 
 	log.Printf("Downloading %dth file of %s\n", order, post.Title)
 
-	resp, err := Request(ctx, c.sessionID, img.OriginalURL)
+	resp, err := c.apiClient.Request(ctx, c.sessionID, img.OriginalURL)
 	if err != nil {
 		return fmt.Errorf("request error (%s): %w", img.OriginalURL, err)
 	}
