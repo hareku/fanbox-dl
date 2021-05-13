@@ -66,6 +66,7 @@ func main() {
 			SeparateByPost: c.Bool("dir-by-post"),
 			CheckAllPosts:  c.Bool("all"),
 			DryRun:         c.Bool("dry-run"),
+			ApiClient:      fanbox.NewApiClient(),
 		})
 
 		start := time.Now()
