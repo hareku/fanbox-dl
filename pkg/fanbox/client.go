@@ -137,12 +137,14 @@ func (c *client) fetchListCreator(ctx context.Context, url string) (*ListCreator
 	return &list, nil
 }
 
+// downloadImageWithRetrying downloads and save the image with retrying.
 func (c *client) downloadImageWithRetrying(ctx context.Context, post Post, order int, img Image) error {
 	operation := func() error {
 		return c.downloadImage(ctx, post, order, img)
 	}
 
-	strategy := backoff.WithContext(backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5), ctx)
+	strategy := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5)
+	strategy = backoff.WithContext(strategy, ctx)
 
 	err := backoff.Retry(operation, strategy)
 	if err != nil {
@@ -152,6 +154,7 @@ func (c *client) downloadImageWithRetrying(ctx context.Context, post Post, order
 	return nil
 }
 
+// downloadImage downloads and save the image.
 func (c *client) downloadImage(ctx context.Context, post Post, order int, img Image) error {
 	name := c.makeFileName(post, order, img)
 	if c.dryRun {
