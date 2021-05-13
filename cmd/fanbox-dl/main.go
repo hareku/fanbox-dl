@@ -19,7 +19,7 @@ func init() {
 func main() {
 	app := &cli.App{
 		Name:  "fanbox-dl",
-		Usage: "Downloads all posted original images of the specified user.",
+		Usage: "Downloads all original images of a user.",
 	}
 
 	app.Flags = []cli.Flag{
@@ -36,7 +36,7 @@ func main() {
 		&cli.StringFlag{
 			Name:  "save-dir",
 			Value: "./images",
-			Usage: "Directory for save images.",
+			Usage: "The save destination folder",
 		},
 		&cli.BoolFlag{
 			Name:  "dir-by-post",
@@ -46,12 +46,12 @@ func main() {
 		&cli.BoolFlag{
 			Name:  "all",
 			Value: false,
-			Usage: "Whether to check all posts. If --all=false, finish to download when found already downloaded image.",
+			Usage: "Whether to check all posts. If --all=false, finish to download when found an already downloaded image.",
 		},
 		&cli.BoolFlag{
 			Name:  "dry-run",
 			Value: false,
-			Usage: "Whether to dry-run (not download images).",
+			Usage: "Whether to dry-run. in dry-run, not download images and output logs only.",
 		},
 	}
 
