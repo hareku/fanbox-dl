@@ -67,6 +67,7 @@ func main() {
 			CheckAllPosts:  c.Bool("all"),
 			DryRun:         c.Bool("dry-run"),
 			ApiClient:      fanbox.NewApiClient(),
+			FileClient:     fanbox.NewFileClient(),
 		})
 
 		start := time.Now()

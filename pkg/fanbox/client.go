@@ -5,8 +5,13 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"path/filepath"
+	"runtime"
+	"time"
 
 	backoff "github.com/cenkalti/backoff/v4"
+	"github.com/hareku/go-filename"
+	"github.com/hareku/go-strlimit"
 )
 
 // Client is the client which downloads images from FANBOX.
@@ -23,6 +28,7 @@ type client struct {
 	checkAllPosts  bool
 	dryRun         bool
 	apiClient      ApiClient
+	fileClient     FileClient
 }
 
 // NewClientInput is the input of NewClient.
@@ -34,7 +40,8 @@ type NewClientInput struct {
 	CheckAllPosts  bool
 	DryRun         bool
 
-	ApiClient ApiClient
+	ApiClient  ApiClient
+	FileClient FileClient
 }
 
 // NewClient return the new Client instance.
@@ -47,6 +54,7 @@ func NewClient(input *NewClientInput) Client {
 		checkAllPosts:  input.CheckAllPosts,
 		dryRun:         input.DryRun,
 		apiClient:      input.ApiClient,
+		fileClient:     input.FileClient,
 	}
 }
 
@@ -75,12 +83,12 @@ func (c *client) Run(ctx context.Context) error {
 			}
 
 			for order, img := range images {
-				downloaded, err := c.isDownloaded(c.makeFileName(post, order, img))
+				isDownloaded, err := c.fileClient.DoesExist(c.makeFileName(post, order, img))
 				if err != nil {
 					return fmt.Errorf("failed to check whether does file exist: %w", err)
 				}
 
-				if downloaded {
+				if isDownloaded {
 					log.Printf("Already downloaded %dth file of %q.\n", order, post.Title)
 					if !c.checkAllPosts {
 						log.Println("No more new images.")
@@ -174,10 +182,37 @@ func (c *client) downloadImage(ctx context.Context, post Post, order int, img Im
 		return fmt.Errorf("file (%s) status code is %d", img.OriginalURL, resp.StatusCode)
 	}
 
-	err = c.saveFile(name, resp)
+	err = c.fileClient.Save(name, resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to save an image: %w", err)
 	}
 
 	return nil
+}
+
+// limitOsSafely limits the string length for OS safely.
+func limitOsSafely(s string) string {
+	switch runtime.GOOS {
+	case "windows":
+		return strlimit.LimitRunesWithEnd(s, 210, "...")
+	default:
+		return strlimit.LimitBytesWithEnd(s, 250, "...")
+	}
+}
+
+func (c *client) makeFileName(post Post, order int, img Image) string {
+	date, err := time.Parse(time.RFC3339, post.PublishedDateTime)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse post published date time %s: %w", post.PublishedDateTime, err))
+	}
+
+	title := filename.EscapeString(post.Title, "-")
+
+	if c.separateByPost {
+		// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
+		return filepath.Join(c.saveDir, c.userID, limitOsSafely(fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), title)), fmt.Sprintf("%d-%s.%s", order, img.ID, img.Extension))
+	}
+
+	// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]-[Order]-[Image ID].[Image Extension]
+	return filepath.Join(c.saveDir, c.userID, fmt.Sprintf("%s.%s", limitOsSafely(fmt.Sprintf("%s-%s-%d-%s", date.UTC().Format("2006-01-02"), title, order, img.ID)), img.Extension))
 }
