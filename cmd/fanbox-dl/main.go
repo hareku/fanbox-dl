@@ -59,14 +59,14 @@ func main() {
 		log.Print("Launching Pixiv FANBOX Downloader!")
 		log.Printf("Input User ID: %q", c.String("user"))
 
-		client := fanbox.Client{
+		client := fanbox.NewClient(&fanbox.NewClientInput{
 			UserID:         c.String("user"),
 			SaveDir:        c.String("save-dir"),
 			FANBOXSESSID:   c.String("sessid"),
 			SeparateByPost: c.Bool("dir-by-post"),
 			CheckAllPosts:  c.Bool("all"),
 			DryRun:         c.Bool("dry-run"),
-		}
+		})
 
 		start := time.Now()
 		err := client.Run(c.Context)
@@ -74,7 +74,7 @@ func main() {
 			return fmt.Errorf("download error: %w", err)
 		}
 
-		log.Printf("Completed (after %v).", time.Now().Sub(start))
+		log.Printf("Completed (after %v).", time.Since(start))
 		return nil
 	}
 

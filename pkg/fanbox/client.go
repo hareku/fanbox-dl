@@ -10,7 +10,22 @@ import (
 )
 
 // Client is the client which downloads images from FANBOX.
-type Client struct {
+type Client interface {
+	Run(ctx context.Context) error
+}
+
+// client is the struct for Client.
+type client struct {
+	userID         string
+	saveDir        string
+	sessionID      string
+	separateByPost bool
+	checkAllPosts  bool
+	dryRun         bool
+}
+
+// NewClientInput is the input of NewClient.
+type NewClientInput struct {
 	UserID         string
 	SaveDir        string
 	FANBOXSESSID   string
@@ -19,8 +34,20 @@ type Client struct {
 	DryRun         bool
 }
 
+// NewClient return the new Client instance.
+func NewClient(input *NewClientInput) Client {
+	return &client{
+		userID:         input.UserID,
+		saveDir:        input.SaveDir,
+		sessionID:      input.FANBOXSESSID,
+		separateByPost: input.SeparateByPost,
+		checkAllPosts:  input.CheckAllPosts,
+		dryRun:         input.DryRun,
+	}
+}
+
 // Run downloads images.
-func (c *Client) Run(ctx context.Context) error {
+func (c *client) Run(ctx context.Context) error {
 	url := c.buildFirstURL()
 
 	for {
@@ -51,7 +78,7 @@ func (c *Client) Run(ctx context.Context) error {
 
 				if downloaded {
 					log.Printf("Already downloaded %dth file of %q.\n", order, post.Title)
-					if !c.CheckAllPosts {
+					if !c.checkAllPosts {
 						log.Println("No more new images.")
 						return nil
 					}
@@ -76,20 +103,20 @@ func (c *Client) Run(ctx context.Context) error {
 }
 
 // buildFirstURL builds the first page URL of /post.listCreator.
-func (c *Client) buildFirstURL() string {
+func (c *client) buildFirstURL() string {
 	params := url.Values{}
-	params.Set("creatorId", c.UserID)
+	params.Set("creatorId", c.userID)
 	params.Set("limit", "50")
 
 	return fmt.Sprintf("https://api.fanbox.cc/post.listCreator?%s", params.Encode())
 }
 
 // fetchListCreator fetches ListCreator by URL.
-func (c *Client) fetchListCreator(ctx context.Context, url string) (*ListCreator, error) {
+func (c *client) fetchListCreator(ctx context.Context, url string) (*ListCreator, error) {
 	var list ListCreator
 
 	operation := func() error {
-		err := RequestAsJSON(ctx, c.FANBOXSESSID, url, &list)
+		err := RequestAsJSON(ctx, c.sessionID, url, &list)
 		if err != nil {
 			return fmt.Errorf("failed to request ListCreator: %w", err)
 		}
@@ -106,7 +133,7 @@ func (c *Client) fetchListCreator(ctx context.Context, url string) (*ListCreator
 	return &list, nil
 }
 
-func (c *Client) downloadImageWithRetrying(ctx context.Context, post Post, order int, img Image) error {
+func (c *client) downloadImageWithRetrying(ctx context.Context, post Post, order int, img Image) error {
 	operation := func() error {
 		return c.downloadImage(ctx, post, order, img)
 	}
@@ -121,16 +148,16 @@ func (c *Client) downloadImageWithRetrying(ctx context.Context, post Post, order
 	return nil
 }
 
-func (c *Client) downloadImage(ctx context.Context, post Post, order int, img Image) error {
+func (c *client) downloadImage(ctx context.Context, post Post, order int, img Image) error {
 	name := c.makeFileName(post, order, img)
-	if c.DryRun {
+	if c.dryRun {
 		log.Printf("[dry-run] Client will download %dth file of %q.\n", order, post.Title)
 		return nil
 	}
 
 	log.Printf("Downloading %dth file of %s\n", order, post.Title)
 
-	resp, err := Request(ctx, c.FANBOXSESSID, img.OriginalURL)
+	resp, err := Request(ctx, c.sessionID, img.OriginalURL)
 	if err != nil {
 		return fmt.Errorf("request error (%s): %w", img.OriginalURL, err)
 	}

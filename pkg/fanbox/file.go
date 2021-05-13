@@ -22,7 +22,7 @@ func osSafeLimit(s string) string {
 	}
 }
 
-func (c *Client) makeFileName(post Post, order int, img Image) string {
+func (c *client) makeFileName(post Post, order int, img Image) string {
 	date, err := time.Parse(time.RFC3339, post.PublishedDateTime)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse post published date time %s: %w", post.PublishedDateTime, err))
@@ -30,16 +30,16 @@ func (c *Client) makeFileName(post Post, order int, img Image) string {
 
 	title := filename.EscapeString(post.Title, "-")
 
-	if c.SeparateByPost {
+	if c.separateByPost {
 		// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
-		return filepath.Join(c.SaveDir, c.UserID, osSafeLimit(fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), title)), fmt.Sprintf("%d-%s.%s", order, img.ID, img.Extension))
+		return filepath.Join(c.saveDir, c.userID, osSafeLimit(fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), title)), fmt.Sprintf("%d-%s.%s", order, img.ID, img.Extension))
 	}
 
 	// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]-[Order]-[Image ID].[Image Extension]
-	return filepath.Join(c.SaveDir, c.UserID, fmt.Sprintf("%s.%s", osSafeLimit(fmt.Sprintf("%s-%s-%d-%s", date.UTC().Format("2006-01-02"), title, order, img.ID)), img.Extension))
+	return filepath.Join(c.saveDir, c.userID, fmt.Sprintf("%s.%s", osSafeLimit(fmt.Sprintf("%s-%s-%d-%s", date.UTC().Format("2006-01-02"), title, order, img.ID)), img.Extension))
 }
 
-func (c *Client) saveFile(name string, resp *http.Response) error {
+func (c *client) saveFile(name string, resp *http.Response) error {
 	dir := filepath.Dir(name)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, 0775)
@@ -70,7 +70,7 @@ func (c *Client) saveFile(name string, resp *http.Response) error {
 	return nil
 }
 
-func (c *Client) isDownloaded(name string) (bool, error) {
+func (c *client) isDownloaded(name string) (bool, error) {
 	_, err := os.Stat(name)
 	if os.IsNotExist(err) {
 		return false, nil
