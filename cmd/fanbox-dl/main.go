@@ -19,7 +19,7 @@ func init() {
 func main() {
 	app := &cli.App{
 		Name:  "fanbox-dl",
-		Usage: "Downloads all posted original images of the specified user.",
+		Usage: "Downloads all original images of a user.",
 	}
 
 	app.Flags = []cli.Flag{
@@ -36,7 +36,7 @@ func main() {
 		&cli.StringFlag{
 			Name:  "save-dir",
 			Value: "./images",
-			Usage: "Directory for save images.",
+			Usage: "The save destination folder",
 		},
 		&cli.BoolFlag{
 			Name:  "dir-by-post",
@@ -46,12 +46,12 @@ func main() {
 		&cli.BoolFlag{
 			Name:  "all",
 			Value: false,
-			Usage: "Whether to check all posts. If --all=false, finish to download when found already downloaded image.",
+			Usage: "Whether to check all posts. If --all=false, finish to download when found an already downloaded image.",
 		},
 		&cli.BoolFlag{
 			Name:  "dry-run",
 			Value: false,
-			Usage: "Whether to dry-run (not download images).",
+			Usage: "Whether to dry-run. in dry-run, not download images and output logs only.",
 		},
 	}
 
@@ -59,14 +59,15 @@ func main() {
 		log.Print("Launching Pixiv FANBOX Downloader!")
 		log.Printf("Input User ID: %q", c.String("user"))
 
-		client := fanbox.Client{
+		client := fanbox.NewClient(&fanbox.NewClientInput{
 			UserID:         c.String("user"),
 			SaveDir:        c.String("save-dir"),
-			FANBOXSESSID:   c.String("sessid"),
 			SeparateByPost: c.Bool("dir-by-post"),
 			CheckAllPosts:  c.Bool("all"),
 			DryRun:         c.Bool("dry-run"),
-		}
+			ApiClient:      fanbox.NewApiClient(c.String("sessid")),
+			FileClient:     fanbox.NewFileClient(),
+		})
 
 		start := time.Now()
 		err := client.Run(c.Context)
@@ -74,7 +75,7 @@ func main() {
 			return fmt.Errorf("download error: %w", err)
 		}
 
-		log.Printf("Completed (after %v).", time.Now().Sub(start))
+		log.Printf("Completed (after %v).", time.Since(start))
 		return nil
 	}
 

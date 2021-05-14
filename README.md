@@ -1,6 +1,6 @@
 # fanbox-dl: Pixiv FANBOX Downloader
 
-**fanbox-dl** downloads all images of a creator. Of course, only the images you can view (supporting or free post).
+`fanbox-dl` downloads images of you are supporting creators.
 
 ## Installation
 
@@ -13,26 +13,6 @@ Please download from https://github.com/hareku/fanbox-dl/releases.
 ## Usage
 
 See usage `fanbox-dl --help`.
-
-```
-NAME:
-   fanbox-dl - Downloads all posted original images of the specified user.
-
-USAGE:
-   fanbox-dl.out [global options] command [command options] [arguments...]
-
-COMMANDS:
-   help, h  Shows a list of commands or help for one command
-
-GLOBAL OPTIONS:
-   --user value      Pixiv user ID to download, don't prepend '@'.
-   --sessid value    FANBOXSESSID which is stored in Cookies.
-   --save-dir value  Directory for save images. (default: "./images")
-   --dir-by-post     Whether to separate save directories for each post. (default: false)
-   --all             Whether to check all posts. If --all=false, finish to download when found already downloaded image. (default: false)
-   --dry-run         Whether to dry-run (not download images). (default: false)
-   --help, -h        show help (default: false)
-```
 
 ### Example
 
