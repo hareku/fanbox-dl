@@ -79,6 +79,7 @@ func (c *client) Run(ctx context.Context) error {
 			}
 
 			for order, img := range images {
+				log.Println(c.makeFileName(post, order, img))
 				isDownloaded, err := c.fileClient.DoesExist(c.makeFileName(post, order, img))
 				if err != nil {
 					return fmt.Errorf("failed to check whether does file exist: %w", err)
@@ -93,6 +94,12 @@ func (c *client) Run(ctx context.Context) error {
 					continue
 				}
 
+				if c.dryRun {
+					log.Printf("[dry-run] Client will download %dth file of %q.\n", order, post.Title)
+					continue
+				}
+
+				log.Printf("Downloading %dth file of %s\n", order, post.Title)
 				err = c.downloadImageWithRetrying(ctx, post, order, img)
 				if err != nil {
 					return fmt.Errorf("download error: %w", err)
@@ -152,12 +159,6 @@ func (c *client) downloadImageWithRetrying(ctx context.Context, post Post, order
 // downloadImage downloads and save the image.
 func (c *client) downloadImage(ctx context.Context, post Post, order int, img Image) error {
 	name := c.makeFileName(post, order, img)
-	if c.dryRun {
-		log.Printf("[dry-run] Client will download %dth file of %q.\n", order, post.Title)
-		return nil
-	}
-
-	log.Printf("Downloading %dth file of %s\n", order, post.Title)
 
 	resp, err := c.apiClient.Request(ctx, img.OriginalURL)
 	if err != nil {
@@ -166,7 +167,7 @@ func (c *client) downloadImage(ctx context.Context, post Post, order int, img Im
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("file (%s) status code is %d", img.OriginalURL, resp.StatusCode)
+		return fmt.Errorf("file (%s) returns status code %d", img.OriginalURL, resp.StatusCode)
 	}
 
 	err = c.fileClient.Save(name, resp.Body)
