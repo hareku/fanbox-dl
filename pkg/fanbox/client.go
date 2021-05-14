@@ -23,7 +23,6 @@ type Client interface {
 type client struct {
 	userID         string
 	saveDir        string
-	sessionID      string
 	separateByPost bool
 	checkAllPosts  bool
 	dryRun         bool
@@ -35,7 +34,6 @@ type client struct {
 type NewClientInput struct {
 	UserID         string
 	SaveDir        string
-	FANBOXSESSID   string
 	SeparateByPost bool
 	CheckAllPosts  bool
 	DryRun         bool
@@ -49,7 +47,6 @@ func NewClient(input *NewClientInput) Client {
 	return &client{
 		userID:         input.UserID,
 		saveDir:        input.SaveDir,
-		sessionID:      input.FANBOXSESSID,
 		separateByPost: input.SeparateByPost,
 		checkAllPosts:  input.CheckAllPosts,
 		dryRun:         input.DryRun,
@@ -128,7 +125,7 @@ func (c *client) fetchListCreator(ctx context.Context, url string) (*ListCreator
 	var list ListCreator
 
 	operation := func() error {
-		err := c.apiClient.RequestAsJSON(ctx, c.sessionID, url, &list)
+		err := c.apiClient.RequestAsJSON(ctx, url, &list)
 		if err != nil {
 			return fmt.Errorf("failed to request ListCreator: %w", err)
 		}
@@ -172,7 +169,7 @@ func (c *client) downloadImage(ctx context.Context, post Post, order int, img Im
 
 	log.Printf("Downloading %dth file of %s\n", order, post.Title)
 
-	resp, err := c.apiClient.Request(ctx, c.sessionID, img.OriginalURL)
+	resp, err := c.apiClient.Request(ctx, img.OriginalURL)
 	if err != nil {
 		return fmt.Errorf("request error (%s): %w", img.OriginalURL, err)
 	}

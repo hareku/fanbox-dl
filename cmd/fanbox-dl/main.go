@@ -62,11 +62,10 @@ func main() {
 		client := fanbox.NewClient(&fanbox.NewClientInput{
 			UserID:         c.String("user"),
 			SaveDir:        c.String("save-dir"),
-			FANBOXSESSID:   c.String("sessid"),
 			SeparateByPost: c.Bool("dir-by-post"),
 			CheckAllPosts:  c.Bool("all"),
 			DryRun:         c.Bool("dry-run"),
-			ApiClient:      fanbox.NewApiClient(),
+			ApiClient:      fanbox.NewApiClient(c.String("sessid")),
 			FileClient:     fanbox.NewFileClient(),
 		})
 

@@ -11,21 +11,23 @@ import (
 
 type ApiClient interface {
 	// Request sends a request to the specified FANBOX URL with credentials.
-	Request(ctx context.Context, sessid string, url string) (*http.Response, error)
+	Request(ctx context.Context, url string) (*http.Response, error)
 
 	// RequestAsJSON sends a request to the specified FANBOX URL with credentials,
 	// and unmarshal the response body as the passed struct.
-	RequestAsJSON(ctx context.Context, sessid string, url string, v interface{}) error
+	RequestAsJSON(ctx context.Context, url string, v interface{}) error
 }
 
-type httpApiClient struct{}
+type httpApiClient struct {
+	sessionID string
+}
 
-func NewApiClient() ApiClient {
-	return &httpApiClient{}
+func NewApiClient(sessionID string) ApiClient {
+	return &httpApiClient{sessionID}
 }
 
 // Request sends a request to the specified FANBOX URL with credentials.
-func (c *httpApiClient) Request(ctx context.Context, sessid string, url string) (*http.Response, error) {
+func (c *httpApiClient) Request(ctx context.Context, url string) (*http.Response, error) {
 	client := http.Client{}
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -33,7 +35,7 @@ func (c *httpApiClient) Request(ctx context.Context, sessid string, url string) 
 		return nil, fmt.Errorf("http request building error: %w", err)
 	}
 
-	req.Header.Set("Cookie", fmt.Sprintf("FANBOXSESSID=%s", sessid))
+	req.Header.Set("Cookie", fmt.Sprintf("FANBOXSESSID=%s", c.sessionID))
 	req.Header.Set("Origin", "https://www.fanbox.cc") // If Origin header is not set, FANBOX returns HTTP 400 error.
 
 	resp, err := client.Do(req)
@@ -44,13 +46,13 @@ func (c *httpApiClient) Request(ctx context.Context, sessid string, url string) 
 	return resp, nil
 }
 
-func (c *httpApiClient) RequestAsJSON(ctx context.Context, sessid string, url string, v interface{}) error {
+func (c *httpApiClient) RequestAsJSON(ctx context.Context, url string, v interface{}) error {
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return fmt.Errorf("v of RequestAsJSON should be a pointer")
 	}
 
-	resp, err := c.Request(ctx, sessid, url)
+	resp, err := c.Request(ctx, url)
 	if err != nil {
 		return fmt.Errorf("http error: %w", err)
 	}
