@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/url"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -57,7 +56,7 @@ func NewClient(input *NewClientInput) Client {
 
 // Run downloads images.
 func (c *client) Run(ctx context.Context) error {
-	url := c.buildFirstURL()
+	url := buildListCreatorURL(c.userID, 50)
 
 	for {
 		content, err := c.fetchListCreator(ctx, url)
@@ -109,15 +108,6 @@ func (c *client) Run(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// buildFirstURL builds the first page URL of /post.listCreator.
-func (c *client) buildFirstURL() string {
-	params := url.Values{}
-	params.Set("creatorId", c.userID)
-	params.Set("limit", "50")
-
-	return fmt.Sprintf("https://api.fanbox.cc/post.listCreator?%s", params.Encode())
 }
 
 // fetchListCreator fetches ListCreator by URL.

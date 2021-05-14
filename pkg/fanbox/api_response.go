@@ -1,5 +1,11 @@
 package fanbox
 
+import (
+	"fmt"
+	"net/url"
+	"strconv"
+)
+
 // ListCreator represents the response of https://api.fanbox.cc/post.listCreator.
 type ListCreator struct {
 	Body ListCreatorBody `json:"body"`
@@ -56,4 +62,13 @@ func (b *PostBody) OrderedImageMap() []Image {
 	}
 
 	return images
+}
+
+// buildListCreatorURL builds the first page URL of /post.listCreator.
+func buildListCreatorURL(userID string, perPage int) string {
+	params := url.Values{}
+	params.Set("creatorId", userID)
+	params.Set("limit", strconv.Itoa(perPage))
+
+	return fmt.Sprintf("https://api.fanbox.cc/post.listCreator?%s", params.Encode())
 }
