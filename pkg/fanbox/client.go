@@ -79,7 +79,6 @@ func (c *client) Run(ctx context.Context) error {
 			}
 
 			for order, img := range images {
-				log.Println(c.makeFileName(post, order, img))
 				isDownloaded, err := c.fileClient.DoesExist(c.makeFileName(post, order, img))
 				if err != nil {
 					return fmt.Errorf("failed to check whether does file exist: %w", err)
