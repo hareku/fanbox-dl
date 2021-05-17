@@ -10,11 +10,10 @@ import (
 )
 
 type ApiClient interface {
-	// Request sends a request to the specified FANBOX URL with credentials.
+	// Request sends a request to the URL with credentials.
 	Request(ctx context.Context, url string) (*http.Response, error)
 
-	// RequestAsJSON sends a request to the specified FANBOX URL with credentials,
-	// and unmarshal the response body as the passed struct.
+	// RequestAsJSON requests with credentials, and unmarshal the response body as v.
 	RequestAsJSON(ctx context.Context, url string, v interface{}) error
 }
 
@@ -22,7 +21,7 @@ type httpApiClient struct {
 	sessionID string
 }
 
-func NewApiClient(sessionID string) ApiClient {
+func NewHttpApiClient(sessionID string) ApiClient {
 	return &httpApiClient{sessionID}
 }
 

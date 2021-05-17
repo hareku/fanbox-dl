@@ -65,7 +65,7 @@ func main() {
 			SeparateByPost: c.Bool("dir-by-post"),
 			CheckAllPosts:  c.Bool("all"),
 			DryRun:         c.Bool("dry-run"),
-			ApiClient:      fanbox.NewApiClient(c.String("sessid")),
+			ApiClient:      fanbox.NewHttpApiClient(c.String("sessid")),
 			FileClient:     fanbox.NewFileClient(),
 		})
 
