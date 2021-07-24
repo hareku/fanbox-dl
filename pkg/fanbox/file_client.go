@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 )
 
+//go:generate mockgen -source=$GOFILE -destination=mock_$GOFILE -package=$GOPACKAGE
+
 type FileClient interface {
 	// Save saves the passed reader as a file.
 	Save(name string, reader io.Reader) error

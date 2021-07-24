@@ -9,6 +9,7 @@ github.com/hareku/go-filename v0.4.0 h1:WoYs3arBl6j8eRnfzlRZqKPLo5RQ7wafN3hK8mMc
 github.com/hareku/go-filename v0.4.0/go.mod h1:ynedV0QdTNdogpQVmaFvVPQHim0AUUUyER/X5Nrw21o=
 github.com/hareku/go-strlimit v0.2.0 h1:la1r8ikJSBSykq3brMlGI7qbvtLlNKFV119eNPorqqc=
 github.com/hareku/go-strlimit v0.2.0/go.mod h1:mIm1KhgUWZZgryifcKOXqHY2pc48q/4cO/vtSXuhe7Y=
+github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/russross/blackfriday/v2 v2.0.1 h1:lPqVAte+HuHNfhJ/0LC98ESWRz8afy9tM/0RK8m9o+Q=
 github.com/russross/blackfriday/v2 v2.0.1/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=

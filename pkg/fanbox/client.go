@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -25,7 +26,7 @@ type client struct {
 	separateByPost bool
 	checkAllPosts  bool
 	dryRun         bool
-	apiClient      ApiClient
+	api            API
 	fileClient     FileClient
 }
 
@@ -37,7 +38,7 @@ type NewClientInput struct {
 	CheckAllPosts  bool
 	DryRun         bool
 
-	ApiClient  ApiClient
+	API        API
 	FileClient FileClient
 }
 
@@ -49,19 +50,19 @@ func NewClient(input *NewClientInput) Client {
 		separateByPost: input.SeparateByPost,
 		checkAllPosts:  input.CheckAllPosts,
 		dryRun:         input.DryRun,
-		apiClient:      input.ApiClient,
+		api:            input.API,
 		fileClient:     input.FileClient,
 	}
 }
 
 // Run downloads images.
 func (c *client) Run(ctx context.Context) error {
-	url := buildListCreatorURL(c.userID, 50)
+	url := ListCreatorURL(c.userID, 50)
 
 	for {
-		content, err := c.fetchListCreator(ctx, url)
+		content, err := c.api.ListCreator(ctx, url)
 		if err != nil {
-			return fmt.Errorf("failed to list images of %q: %w", url, err)
+			return fmt.Errorf("failed to list images of %q: %w", c.userID, err)
 		}
 
 		for _, post := range content.Body.Items {
@@ -79,7 +80,6 @@ func (c *client) Run(ctx context.Context) error {
 			}
 
 			for order, img := range images {
-				log.Println(c.makeFileName(post, order, img))
 				isDownloaded, err := c.fileClient.DoesExist(c.makeFileName(post, order, img))
 				if err != nil {
 					return fmt.Errorf("failed to check whether does file exist: %w", err)
@@ -117,28 +117,6 @@ func (c *client) Run(ctx context.Context) error {
 	return nil
 }
 
-// fetchListCreator fetches ListCreator by URL.
-func (c *client) fetchListCreator(ctx context.Context, url string) (*ListCreator, error) {
-	var list ListCreator
-
-	operation := func() error {
-		err := c.apiClient.RequestAsJSON(ctx, url, &list)
-		if err != nil {
-			return fmt.Errorf("failed to request ListCreator: %w", err)
-		}
-
-		return nil
-	}
-	strategy := backoff.WithContext(backoff.NewExponentialBackOff(), ctx)
-
-	err := backoff.Retry(operation, strategy)
-	if err != nil {
-		return nil, fmt.Errorf("failed to request ListCreator with retrying: %w", err)
-	}
-
-	return &list, nil
-}
-
 // downloadImageWithRetrying downloads and save the image with retrying.
 func (c *client) downloadImageWithRetrying(ctx context.Context, post Post, order int, img Image) error {
 	operation := func() error {
@@ -160,7 +138,7 @@ func (c *client) downloadImageWithRetrying(ctx context.Context, post Post, order
 func (c *client) downloadImage(ctx context.Context, post Post, order int, img Image) error {
 	name := c.makeFileName(post, order, img)
 
-	resp, err := c.apiClient.Request(ctx, img.OriginalURL)
+	resp, err := c.api.Request(ctx, http.MethodGet, img.OriginalURL)
 	if err != nil {
 		return fmt.Errorf("request error (%s): %w", img.OriginalURL, err)
 	}

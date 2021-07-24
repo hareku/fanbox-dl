@@ -64,8 +64,8 @@ func (b *PostBody) OrderedImageMap() []Image {
 	return images
 }
 
-// buildListCreatorURL builds the first page URL of /post.listCreator.
-func buildListCreatorURL(userID string, perPage int) string {
+// ListCreatorURL builds the first page URL of /post.listCreator.
+func ListCreatorURL(userID string, perPage int) string {
 	params := url.Values{}
 	params.Set("creatorId", userID)
 	params.Set("limit", strconv.Itoa(perPage))
