@@ -22,6 +22,7 @@ type Post struct {
 	ID                string    `json:"id"`
 	Title             string    `json:"title"`
 	PublishedDateTime string    `json:"publishedDatetime"`
+	CreatorID         string    `json:"creatorId"`
 	Body              *PostBody `json:"body"`
 }
 
