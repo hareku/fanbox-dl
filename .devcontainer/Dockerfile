@@ -22,3 +22,5 @@ RUN wget https://github.com/goreleaser/goreleaser/releases/download/v0.147.2/gor
         -O /tmp/goreleaser_amd64.deb \
     && dpkg -i /tmp/goreleaser_amd64.deb \
     && rm -f /tmp/goreleaser_amd64.deb
+
+RUN go install github.com/golang/mock@v1.5.0
