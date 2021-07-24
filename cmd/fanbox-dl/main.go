@@ -63,14 +63,17 @@ func main() {
 		httpClient := fanbox.NewHTTPClientWithSession(c.String("sessid"))
 		httpClient.Timeout = time.Second * 30
 
+		storage := fanbox.NewLocalStorage(&fanbox.NewLocalStorageInput{
+			SaveDir:   c.String("save-dir"),
+			DirByPost: c.Bool("dir-by-post"),
+		})
+
 		client := fanbox.NewClient(&fanbox.NewClientInput{
-			UserID:         c.String("user"),
-			SaveDir:        c.String("save-dir"),
-			SeparateByPost: c.Bool("dir-by-post"),
-			CheckAllPosts:  c.Bool("all"),
-			DryRun:         c.Bool("dry-run"),
-			API:            fanbox.NewAPI(httpClient, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5)),
-			FileClient:     fanbox.NewFileClient(),
+			UserID:        c.String("user"),
+			CheckAllPosts: c.Bool("all"),
+			DryRun:        c.Bool("dry-run"),
+			API:           fanbox.NewAPI(httpClient, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5)),
+			Storage:       storage,
 		})
 
 		start := time.Now()

@@ -86,25 +86,24 @@ func Test_client_Run(t *testing.T) {
 						}, nil)
 				}
 
-				fileClientMock := NewMockFileClient(ctrl)
+				storageMock := NewMockStorage(ctrl)
 
-				fileClientMock.
+				storageMock.
 					EXPECT().
-					DoesExist(gomock.Any()).
+					Exist(gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(1).
 					Return(false, nil)
 
-				fileClientMock.
+				storageMock.
 					EXPECT().
-					Save(gomock.Any(), gomock.Any()).
+					Save(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(1).
 					Return(nil)
 
 				return client{
-					userID:     "user1",
-					saveDir:    TempDir,
-					api:        apiMock,
-					fileClient: fileClientMock,
+					userID:  "user1",
+					api:     apiMock,
+					storage: storageMock,
 				}
 			},
 			wantErr: false,

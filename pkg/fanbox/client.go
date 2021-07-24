@@ -5,13 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"path/filepath"
-	"runtime"
-	"time"
 
 	backoff "github.com/cenkalti/backoff/v4"
-	"github.com/hareku/go-filename"
-	"github.com/hareku/go-strlimit"
 )
 
 // Client is the client which downloads images from FANBOX.
@@ -21,37 +16,31 @@ type Client interface {
 
 // client is the struct for Client.
 type client struct {
-	userID         string
-	saveDir        string
-	separateByPost bool
-	checkAllPosts  bool
-	dryRun         bool
-	api            API
-	fileClient     FileClient
+	userID        string
+	checkAllPosts bool
+	dryRun        bool
+	api           API
+	storage       Storage
 }
 
 // NewClientInput is the input of NewClient.
 type NewClientInput struct {
-	UserID         string
-	SaveDir        string
-	SeparateByPost bool
-	CheckAllPosts  bool
-	DryRun         bool
+	UserID        string
+	CheckAllPosts bool
+	DryRun        bool
 
-	API        API
-	FileClient FileClient
+	API     API
+	Storage Storage
 }
 
 // NewClient return the new Client instance.
 func NewClient(input *NewClientInput) Client {
 	return &client{
-		userID:         input.UserID,
-		saveDir:        input.SaveDir,
-		separateByPost: input.SeparateByPost,
-		checkAllPosts:  input.CheckAllPosts,
-		dryRun:         input.DryRun,
-		api:            input.API,
-		fileClient:     input.FileClient,
+		userID:        input.UserID,
+		checkAllPosts: input.CheckAllPosts,
+		dryRun:        input.DryRun,
+		api:           input.API,
+		storage:       input.Storage,
 	}
 }
 
@@ -80,7 +69,7 @@ func (c *client) Run(ctx context.Context) error {
 			}
 
 			for order, img := range images {
-				isDownloaded, err := c.fileClient.DoesExist(c.makeFileName(post, order, img))
+				isDownloaded, err := c.storage.Exist(post, order, img)
 				if err != nil {
 					return fmt.Errorf("failed to check whether does file exist: %w", err)
 				}
@@ -136,8 +125,6 @@ func (c *client) downloadImageWithRetrying(ctx context.Context, post Post, order
 
 // downloadImage downloads and save the image.
 func (c *client) downloadImage(ctx context.Context, post Post, order int, img Image) error {
-	name := c.makeFileName(post, order, img)
-
 	resp, err := c.api.Request(ctx, http.MethodGet, img.OriginalURL)
 	if err != nil {
 		return fmt.Errorf("request error (%s): %w", img.OriginalURL, err)
@@ -148,37 +135,10 @@ func (c *client) downloadImage(ctx context.Context, post Post, order int, img Im
 		return fmt.Errorf("file (%s) returns status code %d", img.OriginalURL, resp.StatusCode)
 	}
 
-	err = c.fileClient.Save(name, resp.Body)
+	err = c.storage.Save(post, order, img, resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to save an image: %w", err)
 	}
 
 	return nil
-}
-
-// limitOsSafely limits the string length for OS safely.
-func limitOsSafely(s string) string {
-	switch runtime.GOOS {
-	case "windows":
-		return strlimit.LimitRunesWithEnd(s, 210, "...")
-	default:
-		return strlimit.LimitBytesWithEnd(s, 250, "...")
-	}
-}
-
-func (c *client) makeFileName(post Post, order int, img Image) string {
-	date, err := time.Parse(time.RFC3339, post.PublishedDateTime)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse post published date time %s: %w", post.PublishedDateTime, err))
-	}
-
-	title := filename.EscapeString(post.Title, "-")
-
-	if c.separateByPost {
-		// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
-		return filepath.Join(c.saveDir, c.userID, limitOsSafely(fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), title)), fmt.Sprintf("%d-%s.%s", order, img.ID, img.Extension))
-	}
-
-	// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]-[Order]-[Image ID].[Image Extension]
-	return filepath.Join(c.saveDir, c.userID, fmt.Sprintf("%s.%s", limitOsSafely(fmt.Sprintf("%s-%s-%d-%s", date.UTC().Format("2006-01-02"), title, order, img.ID)), img.Extension))
 }
