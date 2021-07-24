@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/hareku/fanbox-dl/pkg/fanbox"
 	"github.com/urfave/cli/v2"
 )
@@ -59,13 +60,16 @@ func main() {
 		log.Print("Launching Pixiv FANBOX Downloader!")
 		log.Printf("Input User ID: %q", c.String("user"))
 
+		httpClient := fanbox.NewHTTPClientWithSession(c.String("sessid"))
+		httpClient.Timeout = time.Second * 30
+
 		client := fanbox.NewClient(&fanbox.NewClientInput{
 			UserID:         c.String("user"),
 			SaveDir:        c.String("save-dir"),
 			SeparateByPost: c.Bool("dir-by-post"),
 			CheckAllPosts:  c.Bool("all"),
 			DryRun:         c.Bool("dry-run"),
-			ApiClient:      fanbox.NewHttpApiClient(c.String("sessid")),
+			API:            fanbox.NewAPI(httpClient, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5)),
 			FileClient:     fanbox.NewFileClient(),
 		})
 

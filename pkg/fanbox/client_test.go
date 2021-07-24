@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	mock "github.com/hareku/fanbox-dl/pkg/fanbox/mock"
 )
 
 var TempDir string
@@ -47,7 +46,7 @@ func Test_client_Run(t *testing.T) {
 			name: "download images",
 			makeClient: func(t *testing.T) client {
 				ctrl := gomock.NewController(t)
-				apiClientMock := mock.NewMockApiClient(ctrl)
+				apiMock := NewMockAPI(ctrl)
 
 				post1Images := []Image{
 					{
@@ -57,33 +56,29 @@ func Test_client_Run(t *testing.T) {
 					},
 				}
 
-				apiClientMock.
+				apiMock.
 					EXPECT().
-					RequestAsJSON(gomock.Any(), gomock.Any(), gomock.Any()).
+					ListCreator(gomock.Any(), gomock.Any()).
 					Times(1).
-					DoAndReturn(func(_ context.Context, url string, list *ListCreator) error {
-						*list = ListCreator{
-							Body: ListCreatorBody{
-								Items: []Post{
-									{
-										ID:                "post1",
-										Title:             "title1",
-										PublishedDateTime: "2006-01-02T15:04:05+07:00",
-										Body: &PostBody{
-											Images: &post1Images,
-										},
+					Return(&ListCreator{
+						Body: ListCreatorBody{
+							Items: []Post{
+								{
+									ID:                "post1",
+									Title:             "title1",
+									PublishedDateTime: "2006-01-02T15:04:05+07:00",
+									Body: &PostBody{
+										Images: &post1Images,
 									},
 								},
 							},
-						}
-
-						return nil
-					})
+						},
+					}, nil)
 
 				for i := 0; i < len(post1Images); i++ {
-					apiClientMock.
+					apiMock.
 						EXPECT().
-						Request(gomock.Any(), gomock.Any()).
+						Request(gomock.Any(), gomock.Eq(http.MethodGet), gomock.Any()).
 						Times(1).
 						Return(&http.Response{
 							StatusCode: 200,
@@ -91,7 +86,7 @@ func Test_client_Run(t *testing.T) {
 						}, nil)
 				}
 
-				fileClientMock := mock.NewMockFileClient(ctrl)
+				fileClientMock := NewMockFileClient(ctrl)
 
 				fileClientMock.
 					EXPECT().
@@ -108,7 +103,7 @@ func Test_client_Run(t *testing.T) {
 				return client{
 					userID:     "user1",
 					saveDir:    TempDir,
-					apiClient:  apiClientMock,
+					api:        apiMock,
 					fileClient: fileClientMock,
 				}
 			},
