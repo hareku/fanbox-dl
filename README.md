@@ -9,6 +9,7 @@ Please download from https://github.com/hareku/fanbox-dl/releases.
 - Windows (64bit): `fanbox-dl_x.x.x_Windows_x86_64.exe`
 - Windows (32bit): `fanbox-dl_x.x.x_Windows_i386.exe`
 - Mac: `fanbox-dl_x.x.x_Darwin_x86_64`
+- Mac (M1 CPU): `fanbox-dl_x.x.x_Darwin_arm64`
 
 ## Usage
 
