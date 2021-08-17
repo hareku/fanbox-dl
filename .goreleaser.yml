@@ -9,7 +9,7 @@ builds:
     goos:
       - linux
       - windows
-      # - darwin
+      - darwin
 archives:
   - replacements:
       darwin: Darwin
