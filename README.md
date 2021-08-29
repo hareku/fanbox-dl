@@ -26,3 +26,7 @@ And you can see images e.g. `./images/example/xxxx.jpg`.
 fanbox-dl needs FANBOXSESSID which is stored in browser Cookies for login state.
 
 For example, if you are using Google Chrome, you can get it by following the steps in https://developers.google.com/web/tools/chrome-devtools/storage/cookies.
+
+## Contribution
+
+Please open an issue or pull request.
