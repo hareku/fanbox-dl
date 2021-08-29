@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/hareku/go-filename"
@@ -100,7 +101,7 @@ func (s *localStorage) makeFileName(post Post, order int, img Image) string {
 		panic(fmt.Errorf("failed to parse post published date time %s: %w", post.PublishedDateTime, err))
 	}
 
-	title := filename.EscapeString(post.Title, "-")
+	title := strings.TrimSpace(filename.EscapeString(post.Title, "-"))
 
 	if s.dirByPost {
 		// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
