@@ -50,6 +50,21 @@ func (mr *MockAPIMockRecorder) ListCreator(ctx, url interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCreator", reflect.TypeOf((*MockAPI)(nil).ListCreator), ctx, url)
 }
 
+// ListPlans mocks base method.
+func (m *MockAPI) ListPlans(ctx context.Context) (*PlanListSupporting, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPlans", ctx)
+	ret0, _ := ret[0].(*PlanListSupporting)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPlans indicates an expected call of ListPlans.
+func (mr *MockAPIMockRecorder) ListPlans(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPlans", reflect.TypeOf((*MockAPI)(nil).ListPlans), ctx)
+}
+
 // Request mocks base method.
 func (m *MockAPI) Request(ctx context.Context, method, url string) (*http.Response, error) {
 	m.ctrl.T.Helper()

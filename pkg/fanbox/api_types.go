@@ -73,3 +73,16 @@ func ListCreatorURL(userID string, perPage int) string {
 
 	return fmt.Sprintf("https://api.fanbox.cc/post.listCreator?%s", params.Encode())
 }
+
+type PlanListSupporting struct {
+	Body []Plan `json:"body"`
+}
+
+type Plan struct {
+	CreatorID string `json:"creatorId"`
+}
+
+// PlanListSupportingURL builds the URL of /plan.listSupporting.
+func PlanListSupportingURL() string {
+	return "https://api.fanbox.cc/plan.listSupporting"
+}

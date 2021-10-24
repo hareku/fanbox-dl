@@ -26,8 +26,8 @@ func main() {
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:     "user",
-			Usage:    "Pixiv user ID to download, don't prepend '@'.",
-			Required: true,
+			Usage:    "Pixiv user ID to download, don't prepend '@'. If user is not specified, download images of all users.",
+			Required: false,
 		},
 		&cli.StringFlag{
 			Name:     "sessid",
@@ -58,7 +58,6 @@ func main() {
 
 	app.Action = func(c *cli.Context) error {
 		log.Print("Launching Pixiv FANBOX Downloader!")
-		log.Printf("Input User ID: %q", c.String("user"))
 
 		httpClient := fanbox.NewHTTPClientWithSession(c.String("sessid"))
 		httpClient.Timeout = time.Second * 30
@@ -68,18 +67,35 @@ func main() {
 			DirByPost: c.Bool("dir-by-post"),
 		})
 
+		api := fanbox.NewAPI(httpClient, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+
 		client := fanbox.NewClient(&fanbox.NewClientInput{
-			UserID:        c.String("user"),
 			CheckAllPosts: c.Bool("all"),
 			DryRun:        c.Bool("dry-run"),
-			API:           fanbox.NewAPI(httpClient, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5)),
+			API:           api,
 			Storage:       storage,
 		})
 
 		start := time.Now()
-		err := client.Run(c.Context)
-		if err != nil {
-			return fmt.Errorf("download error: %w", err)
+
+		userID := c.String("user")
+		if userID != "" {
+			log.Printf("Input User ID: %q", userID)
+			if err := client.Run(c.Context, userID); err != nil {
+				return fmt.Errorf("download error: %w", err)
+			}
+		} else {
+			plans, err := api.ListPlans(c.Context)
+			if err != nil {
+				return fmt.Errorf("failed to list plans: %w", err)
+			}
+			log.Printf("Found your %d supporting plans.", len(plans.Body))
+			for _, p := range plans.Body {
+				log.Printf("Start downloading of %q's images", p.CreatorID)
+				if err := client.Run(c.Context, p.CreatorID); err != nil {
+					return fmt.Errorf("download error: %w", err)
+				}
+			}
 		}
 
 		log.Printf("Completed (after %v).", time.Since(start))

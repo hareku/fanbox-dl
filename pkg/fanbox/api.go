@@ -17,6 +17,7 @@ type API interface {
 	// Request sends a request to URL.
 	Request(ctx context.Context, method string, url string) (*http.Response, error)
 	ListCreator(ctx context.Context, url string) (*ListCreator, error)
+	ListPlans(ctx context.Context) (*PlanListSupporting, error)
 }
 
 type webAPI struct {
@@ -57,6 +58,15 @@ func (w *webAPI) Request(ctx context.Context, method string, url string) (*http.
 func (w *webAPI) ListCreator(ctx context.Context, url string) (*ListCreator, error) {
 	var res ListCreator
 	err := w.requestAsJSON(ctx, http.MethodGet, url, &res)
+	if err != nil {
+		return nil, fmt.Errorf("request error as json: %w", err)
+	}
+	return &res, err
+}
+
+func (w *webAPI) ListPlans(ctx context.Context) (*PlanListSupporting, error) {
+	var res PlanListSupporting
+	err := w.requestAsJSON(ctx, http.MethodGet, PlanListSupportingURL(), &res)
 	if err != nil {
 		return nil, fmt.Errorf("request error as json: %w", err)
 	}
