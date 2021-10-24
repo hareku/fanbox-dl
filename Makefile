@@ -1,5 +1,8 @@
 .PHONY: build release
 
+test:
+	go test ./...
+
 build:
 	go build -o fanbox-dl.out cmd/fanbox-dl/main.go
 
