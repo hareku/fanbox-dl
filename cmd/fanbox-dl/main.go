@@ -22,7 +22,7 @@ var app = &cli.App{
 	Usage: "This CLI downloads images of supporting and following creators.",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
-			Name:     "user",
+			Name:     "creator",
 			Usage:    "Pixiv creator ID to download if you want to specify a creator. DO NOT prepend '@'.",
 			Required: false,
 		},
