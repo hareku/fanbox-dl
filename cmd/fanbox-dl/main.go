@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -17,6 +18,18 @@ func init() {
 	log.SetPrefix("[fanbox-dl] ")
 }
 
+func resolveSessionID(c *cli.Context) string {
+	if v := c.String("sessid"); v != "" {
+		return v
+	}
+
+	if v := os.Getenv("FANBOXSESSID"); v != "" {
+		return v
+	}
+
+	return ""
+}
+
 var app = &cli.App{
 	Name:  "fanbox-dl",
 	Usage: "This CLI downloads images of supporting and following creators.",
@@ -28,8 +41,8 @@ var app = &cli.App{
 		},
 		&cli.StringFlag{
 			Name:     "sessid",
-			Usage:    "FANBOXSESSID which is stored in Cookies.",
-			Required: true,
+			Usage:    "FANBOXSESSID which is stored in Cookies. If this is not set, fanbox-dl refers FANBOXSESSID environment value.",
+			Required: false,
 		},
 		&cli.StringFlag{
 			Name:  "save-dir",
@@ -56,7 +69,12 @@ var app = &cli.App{
 		log.Print("Launching Pixiv FANBOX Downloader!")
 		startedAt := time.Now()
 
-		httpClient := fanbox.NewHTTPClientWithSession(c.String("sessid"))
+		sessID := resolveSessionID(c)
+		if sessID == "" {
+			return errors.New("please set FANBOXSESSID to 'sessid' option or environment value, see --help")
+		}
+
+		httpClient := fanbox.NewHTTPClientWithSession(sessID)
 		httpClient.Timeout = time.Second * 30
 		storage := fanbox.NewLocalStorage(&fanbox.NewLocalStorageInput{
 			SaveDir:   c.String("save-dir"),
