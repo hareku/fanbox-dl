@@ -17,7 +17,7 @@ See usage `fanbox-dl --help`.
 
 ### Example
 
-The case if you want to download all images of `https://www.fanbox.cc/@example`, execute `fanbox-dl --sessid xxxxx --save-dir ./images --user example`.
+The case if you want to download all images of `https://www.fanbox.cc/@example`, execute `fanbox-dl --sessid xxxxx --save-dir ./images --creator creatornamehere`.
 
 And you can see images e.g. `./images/example/xxxx.jpg`.
 

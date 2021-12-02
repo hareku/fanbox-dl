@@ -104,10 +104,10 @@ func (s *localStorage) makeFileName(post Post, order int, img Image) string {
 	title := strings.TrimSpace(filename.EscapeString(post.Title, "-"))
 
 	if s.dirByPost {
-		// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
+		// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
 		return filepath.Join(s.saveDir, post.CreatorID, s.limitOsSafely(fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), title)), fmt.Sprintf("%d-%s.%s", order, img.ID, img.Extension))
 	}
 
-	// [SaveDirectory]/[UserID]/2006-01-02-[Post Title]-[Order]-[Image ID].[Image Extension]
+	// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]-[Order]-[Image ID].[Image Extension]
 	return filepath.Join(s.saveDir, post.CreatorID, fmt.Sprintf("%s.%s", s.limitOsSafely(fmt.Sprintf("%s-%s-%d-%s", date.UTC().Format("2006-01-02"), title, order, img.ID)), img.Extension))
 }

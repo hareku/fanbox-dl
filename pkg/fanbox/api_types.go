@@ -66,9 +66,9 @@ func (b *PostBody) OrderedImageMap() []Image {
 }
 
 // ListCreatorURL builds the first page URL of /post.listCreator.
-func ListCreatorURL(userID string, perPage int) string {
+func ListCreatorURL(creatorID string, perPage int) string {
 	params := url.Values{}
-	params.Set("creatorId", userID)
+	params.Set("creatorId", creatorID)
 	params.Set("limit", strconv.Itoa(perPage))
 
 	return fmt.Sprintf("https://api.fanbox.cc/post.listCreator?%s", params.Encode())

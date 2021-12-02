@@ -89,10 +89,10 @@ var app = &cli.App{
 			Storage:       storage,
 		})
 
-		userID := c.String("user")
-		if userID != "" {
-			log.Printf("Input User ID: %q", userID)
-			if err := client.Run(c.Context, userID); err != nil {
+		creatorID := c.String("creator")
+		if creatorID != "" {
+			log.Printf("Inputted Pixiv Creator ID: %q", creatorID)
+			if err := client.Run(c.Context, creatorID); err != nil {
 				return fmt.Errorf("download error: %w", err)
 			}
 		} else {

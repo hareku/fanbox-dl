@@ -11,7 +11,7 @@ import (
 
 // Client is the client which downloads images from FANBOX.
 type Client interface {
-	Run(ctx context.Context, userID string) error
+	Run(ctx context.Context, creatorID string) error
 }
 
 // client is the struct for Client.
@@ -42,13 +42,13 @@ func NewClient(input *NewClientInput) Client {
 }
 
 // Run downloads images.
-func (c *client) Run(ctx context.Context, userID string) error {
-	url := ListCreatorURL(userID, 50)
+func (c *client) Run(ctx context.Context, creatorID string) error {
+	url := ListCreatorURL(creatorID, 50)
 
 	for {
 		content, err := c.api.ListCreator(ctx, url)
 		if err != nil {
-			return fmt.Errorf("failed to list images of %q: %w", userID, err)
+			return fmt.Errorf("failed to list images of %q: %w", creatorID, err)
 		}
 
 		for _, post := range content.Body.Items {

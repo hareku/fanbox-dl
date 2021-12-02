@@ -111,7 +111,7 @@ func Test_client_Run(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := tt.makeClient(t)
-			if err := c.Run(context.TODO(), "user1"); (err != nil) != tt.wantErr {
+			if err := c.Run(context.TODO(), "creator1"); (err != nil) != tt.wantErr {
 				t.Errorf("client.Run() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
