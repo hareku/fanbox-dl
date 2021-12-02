@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -115,7 +116,11 @@ var app = &cli.App{
 
 func main() {
 	if err := app.RunContext(context.Background(), os.Args); err != nil {
-		log.Fatalf("fanbox-dl failed to run: %s", err)
+		log.Println(fmt.Sprintf("%s ERROR LOG %s", strings.Repeat("=", 5), strings.Repeat("=", 5)))
+		log.Printf("fanbox-dl failed to run: %s", err)
+		log.Println(strings.Repeat("=", 21))
+
+		log.Printf("The error log seems to a bug, please open an issue on GitHub: %s.", "https://github.com/hareku/fanbox-dl/issues")
 	}
 	os.Exit(0)
 }
