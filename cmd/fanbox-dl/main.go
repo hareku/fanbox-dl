@@ -17,16 +17,13 @@ func init() {
 	log.SetPrefix("[fanbox-dl] ")
 }
 
-func main() {
-	app := &cli.App{
-		Name:  "fanbox-dl",
-		Usage: "Downloads all original images of a user.",
-	}
-
-	app.Flags = []cli.Flag{
+var app = &cli.App{
+	Name:  "fanbox-dl",
+	Usage: "This CLI downloads images of supporting and following creators.",
+	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:     "user",
-			Usage:    "Pixiv user ID to download, don't prepend '@'. If user is not specified, download images of all users.",
+			Usage:    "Pixiv creator ID to download if you want to specify a creator. DO NOT prepend '@'.",
 			Required: false,
 		},
 		&cli.StringFlag{
@@ -37,7 +34,7 @@ func main() {
 		&cli.StringFlag{
 			Name:  "save-dir",
 			Value: "./images",
-			Usage: "The save destination folder",
+			Usage: "Directory to save images.",
 		},
 		&cli.BoolFlag{
 			Name:  "dir-by-post",
@@ -52,31 +49,26 @@ func main() {
 		&cli.BoolFlag{
 			Name:  "dry-run",
 			Value: false,
-			Usage: "Whether to dry-run. in dry-run, not download images and output logs only.",
+			Usage: "Whether to dry-run. In dry-run, not download images and output logs only.",
 		},
-	}
-
-	app.Action = func(c *cli.Context) error {
+	},
+	Action: func(c *cli.Context) error {
 		log.Print("Launching Pixiv FANBOX Downloader!")
+		startedAt := time.Now()
 
 		httpClient := fanbox.NewHTTPClientWithSession(c.String("sessid"))
 		httpClient.Timeout = time.Second * 30
-
 		storage := fanbox.NewLocalStorage(&fanbox.NewLocalStorageInput{
 			SaveDir:   c.String("save-dir"),
 			DirByPost: c.Bool("dir-by-post"),
 		})
-
 		api := fanbox.NewAPI(httpClient, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
-
 		client := fanbox.NewClient(&fanbox.NewClientInput{
 			CheckAllPosts: c.Bool("all"),
 			DryRun:        c.Bool("dry-run"),
 			API:           api,
 			Storage:       storage,
 		})
-
-		start := time.Now()
 
 		userID := c.String("user")
 		if userID != "" {
@@ -98,14 +90,14 @@ func main() {
 			}
 		}
 
-		log.Printf("Completed (after %v).", time.Since(start))
+		log.Printf("Completed (after %v).", time.Since(startedAt))
 		return nil
-	}
+	},
+}
 
-	ctx := context.Background()
-	err := app.RunContext(ctx, os.Args)
-	if err != nil {
-		log.Fatalf("Pixiv FANBOX Downloader failed: %s", err)
+func main() {
+	if err := app.RunContext(context.Background(), os.Args); err != nil {
+		log.Fatalf("fanbox-dl failed to run: %s", err)
 	}
 	os.Exit(0)
 }
