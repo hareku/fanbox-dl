@@ -1,6 +1,6 @@
 # fanbox-dl: Pixiv FANBOX Downloader
 
-`fanbox-dl` downloads images of you are supporting creators.
+`fanbox-dl` downloads images of supporting and following creators from FANBOX.
 
 ## Installation
 

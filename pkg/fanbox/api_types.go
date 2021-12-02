@@ -82,7 +82,18 @@ type Plan struct {
 	CreatorID string `json:"creatorId"`
 }
 
-// PlanListSupportingURL builds the URL of /plan.listSupporting.
 func PlanListSupportingURL() string {
 	return "https://api.fanbox.cc/plan.listSupporting"
+}
+
+type CreatorListFollowing struct {
+	Body []Creator `json:"body"`
+}
+
+type Creator struct {
+	CreatorID string `json:"creatorId"`
+}
+
+func CreatorListFollowingURL() string {
+	return "https://api.fanbox.cc/creator.listFollowing"
 }

@@ -18,6 +18,7 @@ type API interface {
 	Request(ctx context.Context, method string, url string) (*http.Response, error)
 	ListCreator(ctx context.Context, url string) (*ListCreator, error)
 	ListPlans(ctx context.Context) (*PlanListSupporting, error)
+	ListFollowing(ctx context.Context) (*CreatorListFollowing, error)
 }
 
 type webAPI struct {
@@ -59,7 +60,7 @@ func (w *webAPI) ListCreator(ctx context.Context, url string) (*ListCreator, err
 	var res ListCreator
 	err := w.requestAsJSON(ctx, http.MethodGet, url, &res)
 	if err != nil {
-		return nil, fmt.Errorf("request error as json: %w", err)
+		return nil, err
 	}
 	return &res, err
 }
@@ -68,7 +69,16 @@ func (w *webAPI) ListPlans(ctx context.Context) (*PlanListSupporting, error) {
 	var res PlanListSupporting
 	err := w.requestAsJSON(ctx, http.MethodGet, PlanListSupportingURL(), &res)
 	if err != nil {
-		return nil, fmt.Errorf("request error as json: %w", err)
+		return nil, err
+	}
+	return &res, err
+}
+
+func (w *webAPI) ListFollowing(ctx context.Context) (*CreatorListFollowing, error) {
+	var res CreatorListFollowing
+	err := w.requestAsJSON(ctx, http.MethodGet, CreatorListFollowingURL(), &res)
+	if err != nil {
+		return nil, err
 	}
 	return &res, err
 }
