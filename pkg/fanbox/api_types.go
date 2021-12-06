@@ -30,6 +30,7 @@ type Post struct {
 // PostBody has "Images" or "Blocks and ImageMap".
 type PostBody struct {
 	Blocks   *[]Block          `json:"blocks"`
+	Files    *[]File           `json:"files"`
 	Images   *[]Image          `json:"images"`
 	ImageMap *map[string]Image `json:"imageMap"`
 }
@@ -38,6 +39,14 @@ type PostBody struct {
 type Block struct {
 	Type    string  `json:"type"`
 	ImageID *string `json:"imageId"`
+}
+
+// Image represents a uploaded file.
+type File struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Extension string `json:"extension"`
+	URL       string `json:"url"`
 }
 
 // Image represents a posted image.
