@@ -41,7 +41,7 @@ type Block struct {
 	ImageID *string `json:"imageId"`
 }
 
-// Image represents a uploaded file.
+// File represents a uploaded file.
 type File struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
