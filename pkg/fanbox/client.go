@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 
 	backoff "github.com/cenkalti/backoff/v4"
@@ -23,6 +22,7 @@ type client struct {
 	api           API
 	storage       Storage
 	fileStorage   FileStorage
+	logger        Logger
 }
 
 // NewClientInput is the input of NewClient.
@@ -34,6 +34,7 @@ type NewClientInput struct {
 	API         API
 	Storage     Storage
 	FileStorage FileStorage
+	Logger      Logger
 }
 
 // NewClient return the new Client instance.
@@ -45,6 +46,7 @@ func NewClient(input *NewClientInput) Client {
 		api:           input.API,
 		storage:       input.Storage,
 		fileStorage:   input.FileStorage,
+		logger:        input.Logger,
 	}
 }
 
@@ -60,7 +62,7 @@ func (c *client) Run(ctx context.Context, creatorID string) error {
 
 		for _, post := range content.Body.Items {
 			if post.Body == nil {
-				log.Printf("Skipping an unauthorized post: %q.\n", post.Title)
+				c.logger.Debugf("Skipping an unauthorized post: %q.\n", post.Title)
 				continue
 			}
 
@@ -79,20 +81,20 @@ func (c *client) Run(ctx context.Context, creatorID string) error {
 				}
 
 				if isDownloaded {
-					log.Printf("Already downloaded %dth image of %q.\n", order, post.Title)
+					c.logger.Debugf("Already downloaded %dth image of %q.\n", order, post.Title)
 					if !c.checkAllPosts {
-						log.Println("No more new images.")
+						c.logger.Debugf("No more new images.")
 						return nil
 					}
 					continue
 				}
 
 				if c.dryRun {
-					log.Printf("[dry-run] Client will download %dth image of %q.\n", order, post.Title)
+					c.logger.Infof("[dry-run] Client will download %dth image of %q.\n", order, post.Title)
 					continue
 				}
 
-				log.Printf("Downloading %dth image of %s\n", order, post.Title)
+				c.logger.Infof("Downloading %dth image of %s\n", order, post.Title)
 				err = c.downloadImage(ctx, post, order, img)
 				if err != nil {
 					return fmt.Errorf("download error: %w", err)
@@ -107,20 +109,20 @@ func (c *client) Run(ctx context.Context, creatorID string) error {
 					}
 
 					if isDownloaded {
-						log.Printf("Already downloaded %dth file of %q.\n", order, post.Title)
+						c.logger.Debugf("Already downloaded %dth file of %q.\n", order, post.Title)
 						if !c.checkAllPosts {
-							log.Println("No more new files.")
+							c.logger.Debugf("No more new files.")
 							return nil
 						}
 						continue
 					}
 
 					if c.dryRun {
-						log.Printf("[dry-run] Client will download %dth file of %q.\n", order, post.Title)
+						c.logger.Infof("[dry-run] Client will download %dth file of %q.\n", order, post.Title)
 						continue
 					}
 
-					log.Printf("Downloading %dth file of %s\n", order, post.Title)
+					c.logger.Infof("Downloading %dth file of %s\n", order, post.Title)
 					err = c.downloadFile(ctx, post, order, f)
 					if err != nil {
 						return fmt.Errorf("download error: %w", err)

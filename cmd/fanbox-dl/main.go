@@ -14,11 +14,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func init() {
-	log.SetOutput(os.Stdout)
-	log.SetPrefix("[fanbox-dl] ")
-}
-
 func resolveSessionID(c *cli.Context) string {
 	if v := c.String("sessid"); v != "" {
 		return v
@@ -80,9 +75,19 @@ var app = &cli.App{
 			Value: false,
 			Usage: "Whether to dry-run. In dry-run, not download images and output logs only.",
 		},
+		&cli.BoolFlag{
+			Name:  "verbose",
+			Value: false,
+			Usage: "Whether to output debug logs.",
+		},
 	},
 	Action: func(c *cli.Context) error {
-		log.Print("Launching Pixiv FANBOX Downloader!")
+		logger := fanbox.NewLogger(&fanbox.NewLoggerInput{
+			Out:     os.Stdout,
+			Verbose: c.Bool("verbose"),
+		})
+		logger.Infof("Launching Pixiv FANBOX Downloader!")
+
 		ctx := c.Context
 		startedAt := time.Now()
 
@@ -107,6 +112,7 @@ var app = &cli.App{
 				SaveDir:   c.String("save-dir"),
 				DirByPost: c.Bool("dir-by-post"),
 			}),
+			Logger: logger,
 		})
 
 		resolver := fanbox.NewCreatorResolver(api)
@@ -119,13 +125,13 @@ var app = &cli.App{
 			return fmt.Errorf("failed to resolve creator IDs: %w", err)
 		}
 		for _, id := range ids {
-			log.Printf("Started downloading images of %q.", id)
+			logger.Infof("Started downloading images of %q.", id)
 			if err := client.Run(ctx, string(id)); err != nil {
 				return fmt.Errorf("failed to download image of %q: %w", id, err)
 			}
 		}
 
-		log.Printf("Completed (after %v).", time.Since(startedAt))
+		logger.Infof("Completed (after %v).", time.Since(startedAt))
 		return nil
 	},
 }

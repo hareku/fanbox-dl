@@ -106,6 +106,9 @@ func Test_client_Run(t *testing.T) {
 					api:         apiMock,
 					storage:     storageMock,
 					fileStorage: fileStorageMock,
+					logger: NewLogger(&NewLoggerInput{
+						Out: io.Discard,
+					}),
 				}
 			},
 			wantErr: false,
