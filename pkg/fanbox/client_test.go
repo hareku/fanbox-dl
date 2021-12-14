@@ -100,9 +100,12 @@ func Test_client_Run(t *testing.T) {
 					Times(1).
 					Return(nil)
 
+				fileStorageMock := NewMockFileStorage(ctrl)
+
 				return client{
-					api:     apiMock,
-					storage: storageMock,
+					api:         apiMock,
+					storage:     storageMock,
+					fileStorage: fileStorageMock,
 				}
 			},
 			wantErr: false,

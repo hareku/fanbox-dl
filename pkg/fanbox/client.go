@@ -3,6 +3,7 @@ package fanbox
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -18,17 +19,21 @@ type Client interface {
 type client struct {
 	checkAllPosts bool
 	dryRun        bool
+	downloadFiles bool
 	api           API
 	storage       Storage
+	fileStorage   FileStorage
 }
 
 // NewClientInput is the input of NewClient.
 type NewClientInput struct {
 	CheckAllPosts bool
 	DryRun        bool
+	DownloadFiles bool
 
-	API     API
-	Storage Storage
+	API         API
+	Storage     Storage
+	FileStorage FileStorage
 }
 
 // NewClient return the new Client instance.
@@ -36,8 +41,10 @@ func NewClient(input *NewClientInput) Client {
 	return &client{
 		checkAllPosts: input.CheckAllPosts,
 		dryRun:        input.DryRun,
+		downloadFiles: input.DownloadFiles,
 		api:           input.API,
 		storage:       input.Storage,
+		fileStorage:   input.FileStorage,
 	}
 }
 
@@ -68,11 +75,11 @@ func (c *client) Run(ctx context.Context, creatorID string) error {
 			for order, img := range images {
 				isDownloaded, err := c.storage.Exist(post, order, img)
 				if err != nil {
-					return fmt.Errorf("failed to check whether does file exist: %w", err)
+					return fmt.Errorf("failed to check whether does image exist: %w", err)
 				}
 
 				if isDownloaded {
-					log.Printf("Already downloaded %dth file of %q.\n", order, post.Title)
+					log.Printf("Already downloaded %dth image of %q.\n", order, post.Title)
 					if !c.checkAllPosts {
 						log.Println("No more new images.")
 						return nil
@@ -81,14 +88,43 @@ func (c *client) Run(ctx context.Context, creatorID string) error {
 				}
 
 				if c.dryRun {
-					log.Printf("[dry-run] Client will download %dth file of %q.\n", order, post.Title)
+					log.Printf("[dry-run] Client will download %dth image of %q.\n", order, post.Title)
 					continue
 				}
 
-				log.Printf("Downloading %dth file of %s\n", order, post.Title)
-				err = c.downloadImageWithRetrying(ctx, post, order, img)
+				log.Printf("Downloading %dth image of %s\n", order, post.Title)
+				err = c.downloadImage(ctx, post, order, img)
 				if err != nil {
 					return fmt.Errorf("download error: %w", err)
+				}
+			}
+
+			if post.Body.Files != nil {
+				for order, f := range *post.Body.Files {
+					isDownloaded, err := c.fileStorage.Exist(post, order, f)
+					if err != nil {
+						return fmt.Errorf("failed to check whether does file exist: %w", err)
+					}
+
+					if isDownloaded {
+						log.Printf("Already downloaded %dth file of %q.\n", order, post.Title)
+						if !c.checkAllPosts {
+							log.Println("No more new files.")
+							return nil
+						}
+						continue
+					}
+
+					if c.dryRun {
+						log.Printf("[dry-run] Client will download %dth file of %q.\n", order, post.Title)
+						continue
+					}
+
+					log.Printf("Downloading %dth file of %s\n", order, post.Title)
+					err = c.downloadFile(ctx, post, order, f)
+					if err != nil {
+						return fmt.Errorf("download error: %w", err)
+					}
 				}
 			}
 		}
@@ -103,38 +139,65 @@ func (c *client) Run(ctx context.Context, creatorID string) error {
 	return nil
 }
 
-// downloadImageWithRetrying downloads and save the image with retrying.
-func (c *client) downloadImageWithRetrying(ctx context.Context, post Post, order int, img Image) error {
-	operation := func() error {
-		return c.downloadImage(ctx, post, order, img)
-	}
-
+// downloadImage downloads and save the image with retrying.
+func (c *client) downloadImage(ctx context.Context, post Post, order int, img Image) error {
 	strategy := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5)
 	strategy = backoff.WithContext(strategy, ctx)
 
-	err := backoff.Retry(operation, strategy)
+	var rc io.ReadCloser
+	err := backoff.Retry(func() error {
+		resp, err := c.api.Request(ctx, http.MethodGet, img.OriginalURL)
+		if err != nil {
+			return fmt.Errorf("request error (%s): %w", img.OriginalURL, err)
+		}
+
+		if resp.StatusCode != 200 {
+			defer resp.Body.Close()
+			return fmt.Errorf("status code %d", resp.StatusCode)
+		}
+
+		rc = resp.Body
+		return nil
+	}, strategy)
 	if err != nil {
-		return fmt.Errorf("failed to download with retrying: %w", err)
+		return fmt.Errorf("failed to request file with retrying: %w", err)
+	}
+	defer rc.Close()
+
+	if err := c.storage.Save(post, order, img, rc); err != nil {
+		return fmt.Errorf("failed to save a file: %w", err)
 	}
 
 	return nil
 }
 
-// downloadImage downloads and save the image.
-func (c *client) downloadImage(ctx context.Context, post Post, order int, img Image) error {
-	resp, err := c.api.Request(ctx, http.MethodGet, img.OriginalURL)
-	if err != nil {
-		return fmt.Errorf("request error (%s): %w", img.OriginalURL, err)
-	}
-	defer resp.Body.Close()
+// downloadFile downloads and save the image with retrying.
+func (c *client) downloadFile(ctx context.Context, post Post, order int, f File) error {
+	strategy := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5)
+	strategy = backoff.WithContext(strategy, ctx)
 
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("file (%s) returns status code %d", img.OriginalURL, resp.StatusCode)
-	}
+	var rc io.ReadCloser
+	err := backoff.Retry(func() error {
+		resp, err := c.api.Request(ctx, http.MethodGet, f.URL)
+		if err != nil {
+			return fmt.Errorf("request error (%s): %w", f.URL, err)
+		}
 
-	err = c.storage.Save(post, order, img, resp.Body)
+		if resp.StatusCode != 200 {
+			defer resp.Body.Close()
+			return fmt.Errorf("status code %d", resp.StatusCode)
+		}
+
+		rc = resp.Body
+		return nil
+	}, strategy)
 	if err != nil {
-		return fmt.Errorf("failed to save an image: %w", err)
+		return fmt.Errorf("failed to request file with retrying: %w", err)
+	}
+	defer rc.Close()
+
+	if err := c.fileStorage.Save(post, order, f, rc); err != nil {
+		return fmt.Errorf("failed to save a file: %w", err)
 	}
 
 	return nil

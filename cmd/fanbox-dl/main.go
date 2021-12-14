@@ -71,6 +71,11 @@ var app = &cli.App{
 			Usage: "Whether to download images of following creators.",
 		},
 		&cli.BoolFlag{
+			Name:  "with-files",
+			Value: false,
+			Usage: "Whether to download files creator uploaded (not images).",
+		},
+		&cli.BoolFlag{
 			Name:  "dry-run",
 			Value: false,
 			Usage: "Whether to dry-run. In dry-run, not download images and output logs only.",
@@ -96,6 +101,7 @@ var app = &cli.App{
 		client := fanbox.NewClient(&fanbox.NewClientInput{
 			CheckAllPosts: c.Bool("all"),
 			DryRun:        c.Bool("dry-run"),
+			DownloadFiles: c.Bool("with-files"),
 			API:           api,
 			Storage:       storage,
 		})
