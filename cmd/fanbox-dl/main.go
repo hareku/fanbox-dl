@@ -93,17 +93,20 @@ var app = &cli.App{
 
 		httpClient := fanbox.NewHTTPClientWithSession(sessID)
 		httpClient.Timeout = time.Second * 30
-		storage := fanbox.NewLocalStorage(&fanbox.NewLocalStorageInput{
-			SaveDir:   c.String("save-dir"),
-			DirByPost: c.Bool("dir-by-post"),
-		})
 		api := fanbox.NewAPI(httpClient, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 		client := fanbox.NewClient(&fanbox.NewClientInput{
 			CheckAllPosts: c.Bool("all"),
 			DryRun:        c.Bool("dry-run"),
 			DownloadFiles: c.Bool("with-files"),
 			API:           api,
-			Storage:       storage,
+			Storage: fanbox.NewLocalStorage(&fanbox.NewLocalStorageInput{
+				SaveDir:   c.String("save-dir"),
+				DirByPost: c.Bool("dir-by-post"),
+			}),
+			FileStorage: fanbox.NewLocalFileStorage(&fanbox.NewLocalFileStorageInput{
+				SaveDir:   c.String("save-dir"),
+				DirByPost: c.Bool("dir-by-post"),
+			}),
 		})
 
 		resolver := fanbox.NewCreatorResolver(api)
