@@ -3,7 +3,6 @@ package fanbox
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 
 	backoff "github.com/cenkalti/backoff/v4"
@@ -146,28 +145,25 @@ func (c *client) downloadImage(ctx context.Context, post Post, order int, img Im
 	strategy := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5)
 	strategy = backoff.WithContext(strategy, ctx)
 
-	var rc io.ReadCloser
 	err := backoff.Retry(func() error {
 		resp, err := c.api.Request(ctx, http.MethodGet, img.OriginalURL)
 		if err != nil {
 			return fmt.Errorf("request error (%s): %w", img.OriginalURL, err)
 		}
+		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			defer resp.Body.Close()
 			return fmt.Errorf("status code %d", resp.StatusCode)
 		}
 
-		rc = resp.Body
+		if err := c.storage.Save(post, order, img, resp.Body); err != nil {
+			return fmt.Errorf("failed to save a file: %w", err)
+		}
+
 		return nil
 	}, strategy)
 	if err != nil {
 		return fmt.Errorf("failed to request file with retrying: %w", err)
-	}
-	defer rc.Close()
-
-	if err := c.storage.Save(post, order, img, rc); err != nil {
-		return fmt.Errorf("failed to save a file: %w", err)
 	}
 
 	return nil
@@ -178,28 +174,25 @@ func (c *client) downloadFile(ctx context.Context, post Post, order int, f File)
 	strategy := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5)
 	strategy = backoff.WithContext(strategy, ctx)
 
-	var rc io.ReadCloser
 	err := backoff.Retry(func() error {
 		resp, err := c.api.Request(ctx, http.MethodGet, f.URL)
 		if err != nil {
 			return fmt.Errorf("request error (%s): %w", f.URL, err)
 		}
+		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			defer resp.Body.Close()
 			return fmt.Errorf("status code %d", resp.StatusCode)
 		}
 
-		rc = resp.Body
+		if err := c.fileStorage.Save(post, order, f, resp.Body); err != nil {
+			return fmt.Errorf("failed to save a file: %w", err)
+		}
+
 		return nil
 	}, strategy)
 	if err != nil {
 		return fmt.Errorf("failed to request file with retrying: %w", err)
-	}
-	defer rc.Close()
-
-	if err := c.fileStorage.Save(post, order, f, rc); err != nil {
-		return fmt.Errorf("failed to save a file: %w", err)
 	}
 
 	return nil
