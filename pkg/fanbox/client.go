@@ -100,7 +100,7 @@ func (c *client) Run(ctx context.Context, creatorID string) error {
 				}
 			}
 
-			if post.Body.Files != nil {
+			if c.downloadFiles && post.Body.Files != nil {
 				for order, f := range *post.Body.Files {
 					isDownloaded, err := c.fileStorage.Exist(post, order, f)
 					if err != nil {
