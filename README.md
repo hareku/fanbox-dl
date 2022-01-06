@@ -2,9 +2,11 @@
 
 `fanbox-dl` downloads images of supporting and following creators from FANBOX.
 
+Caution: `fanbox-dl` is command-line-program, so it doesn't provide graphical user interface.
+
 ## Installation
 
-Please download from https://github.com/hareku/fanbox-dl/releases.
+Please download a binary from https://github.com/hareku/fanbox-dl/releases.
 
 - Windows (64bit): `fanbox-dl_x.x.x_Windows_x86_64.exe`
 - Windows (32bit): `fanbox-dl_x.x.x_Windows_i386.exe`
@@ -13,7 +15,9 @@ Please download from https://github.com/hareku/fanbox-dl/releases.
 
 ## Usage
 
-See usage `fanbox-dl --help`.
+1. Open a command line interpreter. For example, If you are Windows user, open `Command Prompt` or `PowerShell`. If you are Mac user, open `Terminal`.
+
+2. Execute downloaded `fanbox-dl` binary. You can see usage by `fanbox-dl --help`.
 
 ### Example
 
