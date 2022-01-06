@@ -100,8 +100,16 @@ func (c *client) Run(ctx context.Context, creatorID string) error {
 				}
 			}
 
-			if c.downloadFiles && post.Body.Files != nil {
-				for order, f := range *post.Body.Files {
+			if c.downloadFiles {
+				var files []File
+				if post.Body.Files != nil {
+					files = *post.Body.Files
+				}
+				if files == nil && post.Body.FileMap != nil {
+					files = post.Body.OrderedFileMap()
+				}
+
+				for order, f := range files {
 					isDownloaded, err := c.fileStorage.Exist(post, order, f)
 					if err != nil {
 						return fmt.Errorf("failed to check whether does file exist: %w", err)

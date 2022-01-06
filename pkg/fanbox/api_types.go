@@ -33,12 +33,14 @@ type PostBody struct {
 	Files    *[]File           `json:"files"`
 	Images   *[]Image          `json:"images"`
 	ImageMap *map[string]Image `json:"imageMap"`
+	FileMap  *map[string]File  `json:"fileMap"`
 }
 
 // Block represents a text block of a post.
 type Block struct {
 	Type    string  `json:"type"`
 	ImageID *string `json:"imageId"`
+	FileID  *string `json:"fileId"`
 }
 
 // File represents a uploaded file.
@@ -72,6 +74,23 @@ func (b *PostBody) OrderedImageMap() []Image {
 	}
 
 	return images
+}
+
+// OrderedFileMap returns ordered files in FileMap by PostBody.Blocks order.
+func (b *PostBody) OrderedFileMap() []File {
+	if b.FileMap == nil || b.Blocks == nil {
+		return nil
+	}
+
+	var files []File
+
+	for _, block := range *b.Blocks {
+		if block.Type == "file" && block.FileID != nil {
+			files = append(files, (*b.FileMap)[*block.FileID])
+		}
+	}
+
+	return files
 }
 
 // ListCreatorURL builds the first page URL of /post.listCreator.
