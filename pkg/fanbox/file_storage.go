@@ -104,7 +104,7 @@ func (s *localFileStorage) makeFileName(post PostInfoBody, order int, f File) st
 	title := strings.TrimSpace(filename.EscapeString(post.Title, "-"))
 
 	if s.dirByPost {
-		// [SaveDirectory]/[CreatorID]/2006-01-02-[PostInfoBody Title]/[Order]-[Image ID].[Image Extension]
+		// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
 		return filepath.Join(
 			s.saveDir,
 			post.CreatorID,
@@ -114,7 +114,7 @@ func (s *localFileStorage) makeFileName(post PostInfoBody, order int, f File) st
 			fmt.Sprintf("%d-%s.%s", order, f.ID, f.Extension))
 	}
 
-	// [SaveDirectory]/[CreatorID]/2006-01-02-[PostInfoBody Title]-file-[Order]-[Image ID].[Image Extension]
+	// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]-file-[Order]-[Image ID].[Image Extension]
 	return filepath.Join(
 		s.saveDir,
 		post.CreatorID,
