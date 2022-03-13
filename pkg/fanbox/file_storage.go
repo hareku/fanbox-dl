@@ -17,10 +17,10 @@ import (
 
 type FileStorage interface {
 	// Save saves the file.
-	Save(post Post, order int, file File, r io.Reader) error
+	Save(post PostInfoBody, order int, file File, r io.Reader) error
 
 	// Exist returns whether the file is already saved.
-	Exist(post Post, order int, file File) (bool, error)
+	Exist(post PostInfoBody, order int, file File) (bool, error)
 }
 
 type localFileStorage struct {
@@ -40,7 +40,7 @@ func NewLocalFileStorage(i *NewLocalFileStorageInput) FileStorage {
 	}
 }
 
-func (s *localFileStorage) Save(post Post, order int, f File, r io.Reader) error {
+func (s *localFileStorage) Save(post PostInfoBody, order int, f File, r io.Reader) error {
 	name := s.makeFileName(post, order, f)
 
 	dir := filepath.Dir(name)
@@ -73,7 +73,7 @@ func (s *localFileStorage) Save(post Post, order int, f File, r io.Reader) error
 	return nil
 }
 
-func (s *localFileStorage) Exist(post Post, order int, f File) (bool, error) {
+func (s *localFileStorage) Exist(post PostInfoBody, order int, f File) (bool, error) {
 	_, err := os.Stat(s.makeFileName(post, order, f))
 	if os.IsNotExist(err) {
 		return false, nil
@@ -95,7 +95,7 @@ func (s *localFileStorage) limitOsSafely(name string) string {
 	}
 }
 
-func (s *localFileStorage) makeFileName(post Post, order int, f File) string {
+func (s *localFileStorage) makeFileName(post PostInfoBody, order int, f File) string {
 	date, err := time.Parse(time.RFC3339, post.PublishedDateTime)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse post published date time %s: %w", post.PublishedDateTime, err))
@@ -104,7 +104,7 @@ func (s *localFileStorage) makeFileName(post Post, order int, f File) string {
 	title := strings.TrimSpace(filename.EscapeString(post.Title, "-"))
 
 	if s.dirByPost {
-		// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
+		// [SaveDirectory]/[CreatorID]/2006-01-02-[PostInfoBody Title]/[Order]-[Image ID].[Image Extension]
 		return filepath.Join(
 			s.saveDir,
 			post.CreatorID,
@@ -114,7 +114,7 @@ func (s *localFileStorage) makeFileName(post Post, order int, f File) string {
 			fmt.Sprintf("%d-%s.%s", order, f.ID, f.Extension))
 	}
 
-	// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]-file-[Order]-[Image ID].[Image Extension]
+	// [SaveDirectory]/[CreatorID]/2006-01-02-[PostInfoBody Title]-file-[Order]-[Image ID].[Image Extension]
 	return filepath.Join(
 		s.saveDir,
 		post.CreatorID,

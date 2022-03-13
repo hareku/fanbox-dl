@@ -18,6 +18,7 @@ type API interface {
 	Request(ctx context.Context, method string, url string) (*http.Response, error)
 	ListCreator(ctx context.Context, url string) (*ListCreator, error)
 	ListPlans(ctx context.Context) (*PlanListSupporting, error)
+	PostInfo(ctx context.Context, postID string) (*PostInfoBody, error)
 	ListFollowing(ctx context.Context) (*CreatorListFollowing, error)
 }
 
@@ -72,6 +73,16 @@ func (w *webAPI) ListPlans(ctx context.Context) (*PlanListSupporting, error) {
 		return nil, err
 	}
 	return &res, err
+}
+
+func (w *webAPI) PostInfo(ctx context.Context, postID string) (*PostInfoBody, error) {
+	var res PostInfo
+	err := w.requestAsJSON(ctx, http.MethodGet, PostInfoURL(postID), &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &res.Body, err
 }
 
 func (w *webAPI) ListFollowing(ctx context.Context) (*CreatorListFollowing, error) {

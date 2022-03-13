@@ -35,7 +35,7 @@ func (m *MockFileStorage) EXPECT() *MockFileStorageMockRecorder {
 }
 
 // Exist mocks base method.
-func (m *MockFileStorage) Exist(post Post, order int, file File) (bool, error) {
+func (m *MockFileStorage) Exist(post PostInfoBody, order int, file File) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Exist", post, order, file)
 	ret0, _ := ret[0].(bool)
@@ -50,7 +50,7 @@ func (mr *MockFileStorageMockRecorder) Exist(post, order, file interface{}) *gom
 }
 
 // Save mocks base method.
-func (m *MockFileStorage) Save(post Post, order int, file File, r io.Reader) error {
+func (m *MockFileStorage) Save(post PostInfoBody, order int, file File, r io.Reader) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Save", post, order, file, r)
 	ret0, _ := ret[0].(error)

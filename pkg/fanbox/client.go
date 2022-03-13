@@ -59,10 +59,15 @@ func (c *client) Run(ctx context.Context, creatorID string) error {
 			return fmt.Errorf("failed to list images of %q: %w", creatorID, err)
 		}
 
-		for _, post := range content.Body.Items {
-			if post.Body == nil {
-				c.logger.Debugf("Skipping an unauthorized post: %q.\n", post.Title)
+		for _, item := range content.Body.Items {
+			if item.IsRestricted {
+				c.logger.Debugf("Skipping an unauthorized post: %q.\n", item.Title)
 				continue
+			}
+
+			post, err := c.api.PostInfo(ctx, item.ID)
+			if err != nil {
+				return fmt.Errorf("failed to get post: %w", err)
 			}
 
 			var images []Image
@@ -74,7 +79,7 @@ func (c *client) Run(ctx context.Context, creatorID string) error {
 			}
 
 			for order, img := range images {
-				isDownloaded, err := c.storage.Exist(post, order, img)
+				isDownloaded, err := c.storage.Exist(*post, order, img)
 				if err != nil {
 					return fmt.Errorf("failed to check whether does image exist: %w", err)
 				}
@@ -94,7 +99,7 @@ func (c *client) Run(ctx context.Context, creatorID string) error {
 				}
 
 				c.logger.Infof("Downloading %dth image of %s\n", order, post.Title)
-				err = c.downloadImage(ctx, post, order, img)
+				err = c.downloadImage(ctx, *post, order, img)
 				if err != nil {
 					return fmt.Errorf("download error: %w", err)
 				}
@@ -110,7 +115,7 @@ func (c *client) Run(ctx context.Context, creatorID string) error {
 				}
 
 				for order, f := range files {
-					isDownloaded, err := c.fileStorage.Exist(post, order, f)
+					isDownloaded, err := c.fileStorage.Exist(*post, order, f)
 					if err != nil {
 						return fmt.Errorf("failed to check whether does file exist: %w", err)
 					}
@@ -130,7 +135,7 @@ func (c *client) Run(ctx context.Context, creatorID string) error {
 					}
 
 					c.logger.Infof("Downloading %dth file of %s\n", order, post.Title)
-					err = c.downloadFile(ctx, post, order, f)
+					err = c.downloadFile(ctx, *post, order, f)
 					if err != nil {
 						return fmt.Errorf("download error: %w", err)
 					}
@@ -149,7 +154,7 @@ func (c *client) Run(ctx context.Context, creatorID string) error {
 }
 
 // downloadImage downloads and save the image with retrying.
-func (c *client) downloadImage(ctx context.Context, post Post, order int, img Image) error {
+func (c *client) downloadImage(ctx context.Context, post PostInfoBody, order int, img Image) error {
 	strategy := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5)
 	strategy = backoff.WithContext(strategy, ctx)
 
@@ -178,7 +183,7 @@ func (c *client) downloadImage(ctx context.Context, post Post, order int, img Im
 }
 
 // downloadFile downloads and save the image with retrying.
-func (c *client) downloadFile(ctx context.Context, post Post, order int, f File) error {
+func (c *client) downloadFile(ctx context.Context, post PostInfoBody, order int, f File) error {
 	strategy := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5)
 	strategy = backoff.WithContext(strategy, ctx)
 

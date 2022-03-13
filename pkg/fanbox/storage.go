@@ -17,10 +17,10 @@ import (
 
 type Storage interface {
 	// Save saves the file.
-	Save(post Post, order int, img Image, file io.Reader) error
+	Save(post PostInfoBody, order int, img Image, file io.Reader) error
 
 	// Exist returns whether the image is already saved.
-	Exist(post Post, order int, img Image) (bool, error)
+	Exist(post PostInfoBody, order int, img Image) (bool, error)
 }
 
 type localStorage struct {
@@ -40,7 +40,7 @@ func NewLocalStorage(i *NewLocalStorageInput) Storage {
 	}
 }
 
-func (s *localStorage) Save(post Post, order int, img Image, reader io.Reader) error {
+func (s *localStorage) Save(post PostInfoBody, order int, img Image, reader io.Reader) error {
 	name := s.makeFileName(post, order, img)
 
 	dir := filepath.Dir(name)
@@ -73,7 +73,7 @@ func (s *localStorage) Save(post Post, order int, img Image, reader io.Reader) e
 	return nil
 }
 
-func (s *localStorage) Exist(post Post, order int, img Image) (bool, error) {
+func (s *localStorage) Exist(post PostInfoBody, order int, img Image) (bool, error) {
 	_, err := os.Stat(s.makeFileName(post, order, img))
 	if os.IsNotExist(err) {
 		return false, nil
@@ -95,7 +95,7 @@ func (s *localStorage) limitOsSafely(name string) string {
 	}
 }
 
-func (s *localStorage) makeFileName(post Post, order int, img Image) string {
+func (s *localStorage) makeFileName(post PostInfoBody, order int, img Image) string {
 	date, err := time.Parse(time.RFC3339, post.PublishedDateTime)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse post published date time %s: %w", post.PublishedDateTime, err))
@@ -104,10 +104,10 @@ func (s *localStorage) makeFileName(post Post, order int, img Image) string {
 	title := strings.TrimSpace(filename.EscapeString(post.Title, "-"))
 
 	if s.dirByPost {
-		// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
+		// [SaveDirectory]/[CreatorID]/2006-01-02-[PostInfoBody Title]/[Order]-[Image ID].[Image Extension]
 		return filepath.Join(s.saveDir, post.CreatorID, s.limitOsSafely(fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), title)), fmt.Sprintf("%d-%s.%s", order, img.ID, img.Extension))
 	}
 
-	// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]-[Order]-[Image ID].[Image Extension]
+	// [SaveDirectory]/[CreatorID]/2006-01-02-[PostInfoBody Title]-[Order]-[Image ID].[Image Extension]
 	return filepath.Join(s.saveDir, post.CreatorID, fmt.Sprintf("%s.%s", s.limitOsSafely(fmt.Sprintf("%s-%s-%d-%s", date.UTC().Format("2006-01-02"), title, order, img.ID)), img.Extension))
 }

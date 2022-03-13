@@ -80,6 +80,21 @@ func (mr *MockAPIMockRecorder) ListPlans(ctx interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPlans", reflect.TypeOf((*MockAPI)(nil).ListPlans), ctx)
 }
 
+// PostInfo mocks base method.
+func (m *MockAPI) PostInfo(ctx context.Context, postID string) (*PostInfoBody, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostInfo", ctx, postID)
+	ret0, _ := ret[0].(*PostInfoBody)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PostInfo indicates an expected call of PostInfo.
+func (mr *MockAPIMockRecorder) PostInfo(ctx, postID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInfo", reflect.TypeOf((*MockAPI)(nil).PostInfo), ctx, postID)
+}
+
 // Request mocks base method.
 func (m *MockAPI) Request(ctx context.Context, method, url string) (*http.Response, error) {
 	m.ctrl.T.Helper()

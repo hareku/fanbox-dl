@@ -19,11 +19,23 @@ type ListCreatorBody struct {
 
 // Post represents post attributes.
 type Post struct {
-	ID                string    `json:"id"`
-	Title             string    `json:"title"`
-	PublishedDateTime string    `json:"publishedDatetime"`
-	CreatorID         string    `json:"creatorId"`
-	Body              *PostBody `json:"body"`
+	ID                string `json:"id"`
+	Title             string `json:"title"`
+	PublishedDateTime string `json:"publishedDatetime"`
+	CreatorID         string `json:"creatorId"`
+	IsRestricted      bool   `json:"isRestricted"`
+	// Body              *PostBody `json:"body"`
+}
+
+type PostInfo struct {
+	Body PostInfoBody `json:"body"`
+}
+
+type PostInfoBody struct {
+	Title             string   `json:"title"`
+	PublishedDateTime string   `json:"publishedDatetime"`
+	CreatorID         string   `json:"creatorId"`
+	Body              PostBody `json:"body"`
 }
 
 // PostBody represents a post's body.
@@ -124,4 +136,8 @@ type Creator struct {
 
 func CreatorListFollowingURL() string {
 	return "https://api.fanbox.cc/creator.listFollowing"
+}
+
+func PostInfoURL(postID string) string {
+	return fmt.Sprintf("https://api.fanbox.cc/post.info?postId=%s", postID)
 }
