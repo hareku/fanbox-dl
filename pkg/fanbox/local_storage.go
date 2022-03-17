@@ -13,35 +13,13 @@ import (
 	"github.com/hareku/go-strlimit"
 )
 
-//go:generate mockgen -source=$GOFILE -destination=mock_$GOFILE -package=$GOPACKAGE
-
-type FileStorage interface {
-	// Save saves the file.
-	Save(post PostInfoBody, order int, file File, r io.Reader) error
-
-	// Exist returns whether the file is already saved.
-	Exist(post PostInfoBody, order int, file File) (bool, error)
-}
-
-type localFileStorage struct {
-	saveDir   string
-	dirByPost bool
-}
-
-type NewLocalFileStorageInput struct {
+type LocalStorage struct {
 	SaveDir   string
 	DirByPost bool
 }
 
-func NewLocalFileStorage(i *NewLocalFileStorageInput) FileStorage {
-	return &localFileStorage{
-		saveDir:   i.SaveDir,
-		dirByPost: i.DirByPost,
-	}
-}
-
-func (s *localFileStorage) Save(post PostInfoBody, order int, f File, r io.Reader) error {
-	name := s.makeFileName(post, order, f)
+func (s *LocalStorage) Save(post Post, order int, d Downloadable, r io.Reader) error {
+	name := s.makeFileName(post, order, d)
 
 	dir := filepath.Dir(name)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -73,8 +51,8 @@ func (s *localFileStorage) Save(post PostInfoBody, order int, f File, r io.Reade
 	return nil
 }
 
-func (s *localFileStorage) Exist(post PostInfoBody, order int, f File) (bool, error) {
-	_, err := os.Stat(s.makeFileName(post, order, f))
+func (s *LocalStorage) Exist(post Post, order int, d Downloadable) (bool, error) {
+	_, err := os.Stat(s.makeFileName(post, order, d))
 	if os.IsNotExist(err) {
 		return false, nil
 	}
@@ -86,7 +64,7 @@ func (s *localFileStorage) Exist(post PostInfoBody, order int, f File) (bool, er
 }
 
 // limitOsSafely limits the string length for OS safely.
-func (s *localFileStorage) limitOsSafely(name string) string {
+func (s *LocalStorage) limitOsSafely(name string) string {
 	switch runtime.GOOS {
 	case "windows":
 		return strlimit.LimitRunesWithEnd(name, 210, "...")
@@ -95,36 +73,46 @@ func (s *localFileStorage) limitOsSafely(name string) string {
 	}
 }
 
-func (s *localFileStorage) makeFileName(post PostInfoBody, order int, f File) string {
+func (s *LocalStorage) makeFileName(post Post, order int, d Downloadable) string {
 	date, err := time.Parse(time.RFC3339, post.PublishedDateTime)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse post published date time %s: %w", post.PublishedDateTime, err))
 	}
 
 	title := strings.TrimSpace(filename.EscapeString(post.Title, "-"))
-
-	if s.dirByPost {
-		// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]/[Order]-[Image ID].[Image Extension]
-		return filepath.Join(
-			s.saveDir,
-			post.CreatorID,
-			s.limitOsSafely(
-				fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), title),
-			),
-			fmt.Sprintf("%d-%s.%s", order, f.ID, f.Extension))
+	fileType := ""
+	// for backward-compatibility, insert "-file-" identifier
+	if _, ok := d.(File); ok {
+		fileType = "file-"
 	}
 
-	// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]-file-[Order]-[Image ID].[Image Extension]
+	if s.DirByPost {
+		// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]/[Order]-[ID].[Extension]
+		return filepath.Join(
+			s.SaveDir,
+			post.CreatorID,
+			s.limitOsSafely(fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), title)),
+			fmt.Sprintf("%s%d-%s.%s", fileType, order, d.GetID(), d.GetExtension()),
+		)
+	}
+
+	// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]-[Order]-[ID].[Extension]
 	return filepath.Join(
-		s.saveDir,
+		s.SaveDir,
 		post.CreatorID,
 		fmt.Sprintf(
 			"%s.%s",
 			s.limitOsSafely(
-				fmt.Sprintf("%s-%s-file-%d-%s",
+				fmt.Sprintf(
+					"%s-%s-%s%d-%s",
 					date.UTC().Format("2006-01-02"),
 					title,
+					fileType,
 					order,
-					f.ID)),
-			f.Extension))
+					d.GetID(),
+				),
+			),
+			d.GetExtension(),
+		),
+	)
 }
