@@ -92,7 +92,7 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 				}
 
 				c.Logger.Infof("Downloading %dth %s of %s\n", order, assetType, post.Title)
-				err = c.downloadImage(ctx, post, order, d)
+				err = c.download(ctx, post, order, d)
 				if err != nil {
 					return fmt.Errorf("download error: %w", err)
 				}
@@ -108,8 +108,8 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 	return nil
 }
 
-// downloadImage downloads and save the file with retrying.
-func (c *Client) downloadImage(ctx context.Context, post Post, order int, d Downloadable) error {
+// download a file with retry.
+func (c *Client) download(ctx context.Context, post Post, order int, d Downloadable) error {
 	strategy := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5)
 	strategy = backoff.WithContext(strategy, ctx)
 
