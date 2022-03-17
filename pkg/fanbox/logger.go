@@ -5,14 +5,9 @@ import (
 	"log"
 )
 
-type Logger interface {
-	Infof(format string, v ...interface{})
-	Debugf(format string, v ...interface{})
-}
-
-type logger struct {
-	l       *log.Logger
-	verbose bool
+type Logger struct {
+	L       *log.Logger
+	Verbose bool
 }
 
 type NewLoggerInput struct {
@@ -20,19 +15,19 @@ type NewLoggerInput struct {
 	Verbose bool
 }
 
-func NewLogger(in *NewLoggerInput) Logger {
-	return &logger{
-		l:       log.New(in.Out, "[fanbox-dl] ", log.LstdFlags),
-		verbose: in.Verbose,
+func NewLogger(in *NewLoggerInput) *Logger {
+	return &Logger{
+		L:       log.New(in.Out, "[fanbox-dl] ", log.LstdFlags),
+		Verbose: in.Verbose,
 	}
 }
 
-func (l *logger) Infof(format string, v ...interface{}) {
-	l.l.Printf("[INFO] "+format, v...)
+func (l *Logger) Infof(format string, v ...interface{}) {
+	l.L.Printf("[INFO] "+format, v...)
 }
 
-func (l *logger) Debugf(format string, v ...interface{}) {
-	if l.verbose {
-		l.l.Printf("[DEBUG] "+format, v...)
+func (l *Logger) Debugf(format string, v ...interface{}) {
+	if l.Verbose {
+		l.L.Printf("[DEBUG] "+format, v...)
 	}
 }
