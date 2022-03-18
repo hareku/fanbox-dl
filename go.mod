@@ -1,6 +1,6 @@
 module github.com/hareku/fanbox-dl
 
-go 1.17
+go 1.18
 
 require (
 	github.com/cenkalti/backoff/v4 v4.1.0
