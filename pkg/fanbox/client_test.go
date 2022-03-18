@@ -17,9 +17,9 @@ import (
 
 func TestClient_Run(t *testing.T) {
 	type config struct {
-		dryRun        bool
-		downloadFiles bool
-		dirByPost     bool
+		dryRun    bool
+		skipFiles bool
+		dirByPost bool
 	}
 
 	tests := []struct {
@@ -27,26 +27,7 @@ func TestClient_Run(t *testing.T) {
 		wantFiles []string
 	}{
 		{
-			config: config{
-				downloadFiles: true,
-				dirByPost:     true,
-			},
-			wantFiles: []string{
-				"oneshotatenno/2022-03-15-multiple-images/0-JF8xFtFv8uoQG2k7DS8Qg1rn.jpeg",
-				"oneshotatenno/2022-03-15-multiple-images/1-UpT650o3tb4YSc4BCG28FMv5.jpeg",
-				"oneshotatenno/2022-03-17-images-files-texts/0-RjuA09eUKC7dbs6F5V7gzn2y.jpeg",
-				"oneshotatenno/2022-03-17-images-files-texts/1-M9bEuTJ9j3Rfp3xtpZf0RDeL.jpeg",
-				"oneshotatenno/2022-03-17-images-files-texts/file-0-3mj6rAzFLrhm197FetXpMdFb.jpeg",
-				"oneshotatenno/2022-03-17-images-files-texts/file-1-wc16n4QerQ8qxIBJrCbWWX3d.jpeg",
-				"oneshotatenno/2022-03-17-multiple-files/file-0-SPyMpjKtXR20vrcHLu1jRu54.jpeg",
-				"oneshotatenno/2022-03-17-multiple-files/file-1-9ZTsPyENS1e21anUrmaFW9Nl.jpeg",
-			},
-		},
-		{
-			config: config{
-				downloadFiles: true,
-				dirByPost:     false,
-			},
+			config: config{},
 			wantFiles: []string{
 				"oneshotatenno/2022-03-15-multiple-images-0-JF8xFtFv8uoQG2k7DS8Qg1rn.jpeg",
 				"oneshotatenno/2022-03-15-multiple-images-1-UpT650o3tb4YSc4BCG28FMv5.jpeg",
@@ -60,8 +41,7 @@ func TestClient_Run(t *testing.T) {
 		},
 		{
 			config: config{
-				downloadFiles: false,
-				dirByPost:     true,
+				dirByPost: true,
 			},
 			wantFiles: []string{
 				"oneshotatenno/2022-03-15-multiple-images/0-JF8xFtFv8uoQG2k7DS8Qg1rn.jpeg",
@@ -76,9 +56,25 @@ func TestClient_Run(t *testing.T) {
 		},
 		{
 			config: config{
-				dryRun:        true,
-				downloadFiles: true,
-				dirByPost:     true,
+				skipFiles: true,
+				dirByPost: true,
+			},
+			wantFiles: []string{
+				"oneshotatenno/2022-03-15-multiple-images/0-JF8xFtFv8uoQG2k7DS8Qg1rn.jpeg",
+				"oneshotatenno/2022-03-15-multiple-images/1-UpT650o3tb4YSc4BCG28FMv5.jpeg",
+				"oneshotatenno/2022-03-17-images-files-texts/0-RjuA09eUKC7dbs6F5V7gzn2y.jpeg",
+				"oneshotatenno/2022-03-17-images-files-texts/1-M9bEuTJ9j3Rfp3xtpZf0RDeL.jpeg",
+				// "oneshotatenno/2022-03-17-images-files-texts/file-0-3mj6rAzFLrhm197FetXpMdFb.jpeg",
+				// "oneshotatenno/2022-03-17-images-files-texts/file-1-wc16n4QerQ8qxIBJrCbWWX3d.jpeg",
+				// "oneshotatenno/2022-03-17-multiple-files/file-0-SPyMpjKtXR20vrcHLu1jRu54.jpeg",
+				// "oneshotatenno/2022-03-17-multiple-files/file-1-9ZTsPyENS1e21anUrmaFW9Nl.jpeg",
+			},
+		},
+		{
+			config: config{
+				dryRun:    true,
+				skipFiles: true,
+				dirByPost: true,
 			},
 			wantFiles: nil,
 		},
@@ -102,7 +98,7 @@ func TestClient_Run(t *testing.T) {
 			client := fanbox.Client{
 				CheckAllPosts: true,
 				DryRun:        tt.config.dryRun,
-				DownloadFiles: tt.config.downloadFiles,
+				SkipFiles:     tt.config.skipFiles,
 				OfficialAPIClient: &fanbox.OfficialAPIClient{
 					HTTPClient: httpClient,
 					Strategy:   backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5),

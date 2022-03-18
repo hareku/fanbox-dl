@@ -13,7 +13,7 @@ import (
 type Client struct {
 	CheckAllPosts     bool
 	DryRun            bool
-	DownloadFiles     bool
+	SkipFiles         bool
 	OfficialAPIClient *OfficialAPIClient
 	Storage           *LocalStorage
 	Logger            *Logger
@@ -83,6 +83,11 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 						c.Logger.Debugf("No more new files and images.")
 						return nil
 					}
+					continue
+				}
+
+				if assetType == "file" && c.SkipFiles {
+					c.Logger.Debugf("Skipping %dth file (not images) of %q.\n", order, post.Title)
 					continue
 				}
 

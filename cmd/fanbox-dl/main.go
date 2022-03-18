@@ -60,10 +60,10 @@ var followingFlag = &cli.BoolFlag{
 	Value: true,
 	Usage: "Whether to download images of following creators.",
 }
-var withFilesFlag = &cli.BoolFlag{
-	Name:  "with-files",
+var skipFiles = &cli.BoolFlag{
+	Name:  "skip-files",
 	Value: false,
-	Usage: "Whether to download files creator uploaded (not images).",
+	Usage: "Whether to skip downloading files (not images).",
 }
 var dryRunFlag = &cli.BoolFlag{
 	Name:  "dry-run",
@@ -92,7 +92,7 @@ var app = &cli.App{
 		allFlag,
 		supportingFlag,
 		followingFlag,
-		withFilesFlag,
+		skipFiles,
 		dryRunFlag,
 		verboseFlag,
 		timeoutSecFlag,
@@ -119,8 +119,8 @@ var app = &cli.App{
 
 		client := &fanbox.Client{
 			CheckAllPosts:     c.Bool(allFlag.Name),
-			DryRun:            c.Bool("dry-run"),
-			DownloadFiles:     c.Bool("with-files"),
+			DryRun:            c.Bool(dryRunFlag.Name),
+			SkipFiles:         c.Bool(skipFiles.Name),
 			OfficialAPIClient: api,
 			Storage: &fanbox.LocalStorage{
 				SaveDir:   c.String(saveDirFlag.Name),
