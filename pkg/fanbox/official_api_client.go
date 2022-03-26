@@ -7,38 +7,25 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/cenkalti/backoff/v4"
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 type OfficialAPIClient struct {
-	HTTPClient *http.Client
-	Strategy   backoff.BackOff
+	HTTPClient *retryablehttp.Client
+	SessionID  string
 }
 
 func (c *OfficialAPIClient) Request(ctx context.Context, method string, url string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, method, url, nil)
-	req.Header.Set("Origin", "https://www.fanbox.cc") // If Origin header is not set, FANBOX returns HTTP 400 error.
-
+	req, err := retryablehttp.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("http request building error: %w", err)
 	}
 
-	var resp *http.Response
-	op := backoff.Operation(func() error {
-		_resp, err := c.HTTPClient.Do(req)
-		if err != nil {
-			return fmt.Errorf("http response error: %w", err)
-		}
-		resp = _resp
-		return nil
-	})
+	req = req.WithContext(ctx)
+	req.Header.Set("Cookie", fmt.Sprintf("FANBOXSESSID=%s", c.SessionID))
+	req.Header.Set("Origin", "https://www.fanbox.cc") // If Origin header is not set, FANBOX returns HTTP 400 error.
 
-	err = backoff.Retry(op, backoff.WithContext(c.Strategy, ctx))
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
+	return c.HTTPClient.Do(req)
 }
 
 func (c *OfficialAPIClient) RequestAndUnwrapJSON(ctx context.Context, method string, url string, v interface{}) error {

@@ -6,10 +6,9 @@ import (
 	"os"
 	"sort"
 	"testing"
-	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/hareku/fanbox-dl/pkg/fanbox"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/mod/sumdb/dirhash"
@@ -84,8 +83,8 @@ func TestClient_Run(t *testing.T) {
 		Out:     os.Stdout,
 		Verbose: true,
 	})
-	httpClient := fanbox.NewHTTPClientWithSession("")
-	httpClient.Timeout = time.Second * 10
+	httpClient := retryablehttp.NewClient()
+	httpClient.Logger = logger
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("config:%+v", tt.config), func(t *testing.T) {
@@ -101,7 +100,6 @@ func TestClient_Run(t *testing.T) {
 				SkipFiles:     tt.config.skipFiles,
 				OfficialAPIClient: &fanbox.OfficialAPIClient{
 					HTTPClient: httpClient,
-					Strategy:   backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5),
 				},
 				Storage: &fanbox.LocalStorage{
 					SaveDir:   saveDir,

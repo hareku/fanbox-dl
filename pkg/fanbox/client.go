@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-
-	backoff "github.com/cenkalti/backoff/v4"
 )
 
 // Client is the struct for Client.
@@ -113,30 +111,19 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 	return nil
 }
 
-// download a file with retry.
 func (c *Client) download(ctx context.Context, post Post, order int, d Downloadable) error {
-	strategy := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5)
-	strategy = backoff.WithContext(strategy, ctx)
-
-	err := backoff.Retry(func() error {
-		resp, err := c.OfficialAPIClient.Request(ctx, http.MethodGet, d.GetURL())
-		if err != nil {
-			return fmt.Errorf("request error (%s): %w", d.GetURL(), err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != 200 {
-			return fmt.Errorf("status code %d", resp.StatusCode)
-		}
-
-		if err := c.Storage.Save(post, order, d, resp.Body); err != nil {
-			return fmt.Errorf("failed to save a file: %w", err)
-		}
-
-		return nil
-	}, strategy)
+	resp, err := c.OfficialAPIClient.Request(ctx, http.MethodGet, d.GetURL())
 	if err != nil {
-		return fmt.Errorf("failed to request file with retrying: %w", err)
+		return fmt.Errorf("request error (%s): %w", d.GetURL(), err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("status code %d", resp.StatusCode)
+	}
+
+	if err := c.Storage.Save(post, order, d, resp.Body); err != nil {
+		return fmt.Errorf("failed to save a file: %w", err)
 	}
 
 	return nil

@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/hareku/fanbox-dl/pkg/fanbox"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/urfave/cli/v2"
 )
 
 func resolveSessionID(c *cli.Context) string {
-	if v := c.String("sessid"); v != "" {
+	if v := c.String(sessIDFlag.Name); v != "" {
 		return v
 	}
 
@@ -109,12 +109,12 @@ var app = &cli.App{
 			logger.Infof("Fanbox SessionID is not set. Starting as a guest.")
 		}
 
-		httpClient := fanbox.NewHTTPClientWithSession(sessID)
-		httpClient.Timeout = time.Second * time.Duration(c.Uint(timeoutSecFlag.Name))
+		httpClient := retryablehttp.NewClient()
+		httpClient.Logger = logger
 
 		api := &fanbox.OfficialAPIClient{
 			HTTPClient: httpClient,
-			Strategy:   backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5),
+			SessionID:  sessID,
 		}
 
 		client := &fanbox.Client{
