@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -156,7 +157,7 @@ var app = &cli.App{
 }
 
 func main() {
-	if err := app.RunContext(context.Background(), os.Args); err != nil {
+	if err := run(); err != nil {
 		log.Println(fmt.Sprintf("%s ERROR LOG %s", strings.Repeat("=", 5), strings.Repeat("=", 5)))
 		log.Printf("fanbox-dl failed to run: %s", err)
 		log.Println(strings.Repeat("=", 21))
@@ -164,4 +165,14 @@ func main() {
 		log.Printf("The error log seems a bug, please open an issue on GitHub: %s.", "https://github.com/hareku/fanbox-dl/issues")
 	}
 	os.Exit(0)
+}
+
+func run() error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	if err := app.RunContext(ctx, os.Args); err != nil {
+		return err
+	}
+	return nil
 }
