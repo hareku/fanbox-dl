@@ -3,6 +3,7 @@ package fanbox
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 )
@@ -116,7 +117,10 @@ func (c *Client) download(ctx context.Context, post Post, order int, d Downloada
 	if err != nil {
 		return fmt.Errorf("request error (%s): %w", d.GetURL(), err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("status code %d", resp.StatusCode)

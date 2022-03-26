@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"reflect"
 
@@ -38,7 +39,10 @@ func (c *OfficialAPIClient) RequestAndUnwrapJSON(ctx context.Context, method str
 	if err != nil {
 		return fmt.Errorf("http error: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("status is %s", resp.Status)
