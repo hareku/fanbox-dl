@@ -1,6 +1,6 @@
 module github.com/hareku/fanbox-dl
 
-go 1.18
+go 1.19
 
 require (
 	github.com/hareku/go-filename v0.4.0
