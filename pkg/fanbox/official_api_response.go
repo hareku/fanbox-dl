@@ -21,6 +21,7 @@ type Post struct {
 	Title             string    `json:"title"`
 	PublishedDateTime string    `json:"publishedDatetime"`
 	CreatorID         string    `json:"creatorId"`
+	FeeRequired       int       `json:"feeRequired"`
 	IsRestricted      bool      `json:"isRestricted"`
 	Body              *PostBody `json:"body"`
 }

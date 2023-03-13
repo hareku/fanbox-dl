@@ -44,7 +44,12 @@ var saveDirFlag = &cli.StringFlag{
 var dirByPostFlag = &cli.BoolFlag{
 	Name:  "dir-by-post",
 	Value: false,
-	Usage: "Whether to separate save directories for each post.",
+	Usage: "Whether to separate save directories by post title.",
+}
+var dirByPlanFlag = &cli.BoolFlag{
+	Name:  "dir-by-plan",
+	Value: false,
+	Usage: "Whether to separate save directories by plan.",
 }
 var allFlag = &cli.BoolFlag{
 	Name:  "all",
@@ -90,6 +95,7 @@ var app = &cli.App{
 		sessIDFlag,
 		saveDirFlag,
 		dirByPostFlag,
+		dirByPlanFlag,
 		allFlag,
 		supportingFlag,
 		followingFlag,
@@ -126,6 +132,7 @@ var app = &cli.App{
 			Storage: &fanbox.LocalStorage{
 				SaveDir:   c.String(saveDirFlag.Name),
 				DirByPost: c.Bool(dirByPostFlag.Name),
+				DirByPlan: c.Bool(dirByPlanFlag.Name),
 			},
 			Logger: logger,
 		}
@@ -158,7 +165,7 @@ var app = &cli.App{
 
 func main() {
 	if err := run(); err != nil {
-		log.Println(fmt.Sprintf("%s ERROR LOG %s", strings.Repeat("=", 5), strings.Repeat("=", 5)))
+		log.Printf("%s ERROR LOG %s", strings.Repeat("=", 5), strings.Repeat("=", 5))
 		log.Printf("fanbox-dl failed to run: %s", err)
 		log.Println(strings.Repeat("=", 21))
 

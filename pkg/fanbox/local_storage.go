@@ -16,6 +16,7 @@ import (
 type LocalStorage struct {
 	SaveDir   string
 	DirByPost bool
+	DirByPlan bool
 }
 
 func (s *LocalStorage) Save(post Post, order int, d Downloadable, r io.Reader) error {
@@ -86,11 +87,17 @@ func (s *LocalStorage) makeFileName(post Post, order int, d Downloadable) string
 		fileType = "file-"
 	}
 
+	planDir := ""
+	if s.DirByPlan {
+		planDir = fmt.Sprintf("%dyen", post.FeeRequired)
+	}
+
 	if s.DirByPost {
 		// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]/[Order]-[ID].[Extension]
 		return filepath.Join(
 			s.SaveDir,
 			post.CreatorID,
+			planDir,
 			s.limitOsSafely(fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), title)),
 			fmt.Sprintf("%s%d-%s.%s", fileType, order, d.GetID(), d.GetExtension()),
 		)
@@ -100,6 +107,7 @@ func (s *LocalStorage) makeFileName(post Post, order int, d Downloadable) string
 	return filepath.Join(
 		s.SaveDir,
 		post.CreatorID,
+		planDir,
 		fmt.Sprintf(
 			"%s.%s",
 			s.limitOsSafely(
