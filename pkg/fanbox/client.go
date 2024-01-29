@@ -71,6 +71,11 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 					return fmt.Errorf("unsupported asset type: %+v", d)
 				}
 
+				if d.GetID() == "" {
+					c.Logger.Infof("Can't download %dth %s of %q: bad URL", order, assetType, post.Title)
+					continue
+				}
+
 				isDownloaded, err := c.Storage.Exist(post, order, d)
 				if err != nil {
 					return fmt.Errorf("failed to check whether does %s exist: %w", assetType, err)
