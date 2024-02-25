@@ -4,7 +4,7 @@ test:
 	go test ./...
 
 build:
-	go build -o fanbox-dl.out cmd/fanbox-dl/main.go
+	go build -o fanbox-dl.exe cmd/fanbox-dl/main.go
 
 # make release TAG=vx.x.x
 TAG =
