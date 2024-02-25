@@ -32,7 +32,6 @@ The latest binary can be downloaded [here](https://github.com/hareku/fanbox-dl/r
 | dry-run | Will skip downloading all content from creators. | `--dry-run` | `false` |
 | verbose | Gives more detailed information about commands being executed by the application. <br>Useful for debugging errors. | `--verbose` | `false` |
 | save-dir | Root directory to save content. <br>Put directory in double quotes `"` if it contains spaces. <br> Supports relative and absolute directories. | `--savedir ./content` | `./images` |
-| timeout | Timeout value in seconds to download a file. Zero means no timeout. | `--timeout 5` | `0` |
 
 
 ### Example

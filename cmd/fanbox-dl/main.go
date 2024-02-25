@@ -81,11 +81,6 @@ var verboseFlag = &cli.BoolFlag{
 	Value: false,
 	Usage: "Whether to output debug logs.",
 }
-var timeoutSecFlag = &cli.UintFlag{
-	Name:  "timeout",
-	Value: 0,
-	Usage: "timeout value(sec) to download a file. zero means never timeout.",
-}
 
 var app = &cli.App{
 	Name:  "fanbox-dl",
@@ -102,7 +97,6 @@ var app = &cli.App{
 		skipFiles,
 		dryRunFlag,
 		verboseFlag,
-		timeoutSecFlag,
 	},
 	Action: func(c *cli.Context) error {
 		logger := fanbox.NewLogger(&fanbox.NewLoggerInput{
