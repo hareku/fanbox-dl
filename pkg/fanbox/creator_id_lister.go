@@ -7,9 +7,10 @@ import (
 )
 
 type CreatorIDListerDoInput struct {
-	InputCreatorID    string
+	InputCreatorIDs   []string
 	IncludeSupporting bool
 	IncludeFollowing  bool
+	IgnoreCreatorIDs  []string
 }
 
 type CreatorIDLister struct {
@@ -17,8 +18,30 @@ type CreatorIDLister struct {
 }
 
 func (c *CreatorIDLister) Do(ctx context.Context, in *CreatorIDListerDoInput) ([]string, error) {
-	if in.InputCreatorID != "" {
-		return []string{in.InputCreatorID}, nil
+	all, err := c.all(ctx, in)
+	if err != nil {
+		return nil, fmt.Errorf("list all creator IDs: %w", err)
+	}
+
+	if len(in.IgnoreCreatorIDs) > 0 {
+		ids := map[string]interface{}{}
+		for _, id := range all {
+			ids[id] = nil
+		}
+		for _, id := range in.IgnoreCreatorIDs {
+			delete(ids, id)
+		}
+		all = make([]string, 0, len(ids))
+		for id := range ids {
+			all = append(all, id)
+		}
+	}
+	return all, nil
+}
+
+func (c *CreatorIDLister) all(ctx context.Context, in *CreatorIDListerDoInput) ([]string, error) {
+	if len(in.InputCreatorIDs) > 0 {
+		return in.InputCreatorIDs, nil
 	}
 
 	ids := map[string]interface{}{}

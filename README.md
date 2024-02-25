@@ -22,7 +22,8 @@ The latest binary can be downloaded [here](https://github.com/hareku/fanbox-dl/r
 | Command | Description | Usage | Default |
 | --- | --- | --- | ---: |
 | sessid | Requires FANBOXSESSID which is stored in browser Cookies for login state. <br>When not provided, refers FANBOXSESSID environment value. <br>If unavailable, only free posts are downloaded when accompanied by a `creator` flag. | `--sessid xxxxx` | `NULL` |
-| creator | Pixiv creator ID to download the content of a specific creator. <br>Overrides `supporting` and `following` flags. <br>`https://www.fanbox.cc/@`**example**. <br>Only bold text needed from URL. | `--creator example` | `NULL` |
+| creator | Comma separated Pixiv creator IDs to download the contents. <br>Overrides `supporting` and `following` flags. <br>`https://www.fanbox.cc/@`**example**. <br>Only bold text needed from URL. | `--creator user1`, `--creator user1,user2` | `NULL` |
+| ignore-creator | Comma separated Pixiv creator IDs to ignore to download the contents. | `--ignore-creator user1,user2` | `NULL` |
 | supporting | When disabled, will not download content from creators you're supporting. | `--supporting=false` | `true` |
 | following | When disabled, will not download content from creators you only follow. | `--following=false` | `true` |
 | dir-by-plan | Separates content saved into directories based on the plan the post belonged to. | `--dir-by-plan` | `false` |

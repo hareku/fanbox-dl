@@ -28,7 +28,12 @@ func resolveSessionID(c *cli.Context) string {
 
 var creatorFlag = &cli.StringFlag{
 	Name:     "creator",
-	Usage:    "Pixiv creator ID to download if you want to specify a creator. DO NOT prepend '@'.",
+	Usage:    "Comma separated creator IDs to download. DO NOT prepend '@' to the creator ID.",
+	Required: false,
+}
+var ignoreCreatorFlag = &cli.StringFlag{
+	Name:     "ignore-creator",
+	Usage:    "Comma separated creator IDs to ignore to download.",
 	Required: false,
 }
 var sessIDFlag = &cli.StringFlag{
@@ -138,7 +143,8 @@ var app = &cli.App{
 			OfficialAPIClient: api,
 		}
 		ids, err := idLister.Do(ctx, &fanbox.CreatorIDListerDoInput{
-			InputCreatorID:    c.String(creatorFlag.Name),
+			InputCreatorIDs:   strings.Split(c.String(creatorFlag.Name), ","),
+			IgnoreCreatorIDs:  strings.Split(c.String(ignoreCreatorFlag.Name), ","),
 			IncludeSupporting: c.Bool(supportingFlag.Name),
 			IncludeFollowing:  c.Bool(followingFlag.Name),
 		})
