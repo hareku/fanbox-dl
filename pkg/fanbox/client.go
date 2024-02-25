@@ -33,10 +33,11 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 		if err != nil {
 			return fmt.Errorf("failed to list posts of %q: %w", creatorID, err)
 		}
+		c.Logger.Debugf("Found %d posts in %s", len(content.Body.Items), nextURL)
 
 		for _, item := range content.Body.Items {
 			if item.IsRestricted {
-				c.Logger.Debugf("Skipping a ristricted post: %q.", item.Title)
+				c.Logger.Debugf("Skipping a ristricted post: %s %q.", item.PublishedDateTime, item.Title)
 				continue
 			}
 
