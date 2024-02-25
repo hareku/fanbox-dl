@@ -92,6 +92,7 @@ var app = &cli.App{
 	Usage: "This CLI downloads images of supporting and following creators.",
 	Flags: []cli.Flag{
 		creatorFlag,
+		ignoreCreatorFlag,
 		sessIDFlag,
 		saveDirFlag,
 		dirByPostFlag,
