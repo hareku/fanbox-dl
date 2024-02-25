@@ -15,6 +15,7 @@ type CreatorIDListerDoInput struct {
 
 type CreatorIDLister struct {
 	OfficialAPIClient *OfficialAPIClient
+	Logger            *Logger
 }
 
 func (c *CreatorIDLister) Do(ctx context.Context, in *CreatorIDListerDoInput) ([]string, error) {
@@ -23,24 +24,23 @@ func (c *CreatorIDLister) Do(ctx context.Context, in *CreatorIDListerDoInput) ([
 		return nil, fmt.Errorf("list all creator IDs: %w", err)
 	}
 
-	if len(in.IgnoreCreatorIDs) > 0 {
-		ids := map[string]interface{}{}
-		for _, id := range all {
-			ids[id] = nil
-		}
-		for _, id := range in.IgnoreCreatorIDs {
-			delete(ids, id)
-		}
-		all = make([]string, 0, len(ids))
-		for id := range ids {
-			all = append(all, id)
-		}
+	ignoreMap := map[string]interface{}{}
+	for _, id := range in.IgnoreCreatorIDs {
+		ignoreMap[id] = nil
 	}
-	return all, nil
+	res := make([]string, 0, len(all))
+	for _, id := range all {
+		if _, ok := ignoreMap[id]; ok {
+			continue
+		}
+		res = append(res, id)
+	}
+	return res, nil
 }
 
 func (c *CreatorIDLister) all(ctx context.Context, in *CreatorIDListerDoInput) ([]string, error) {
 	if len(in.InputCreatorIDs) > 0 {
+		c.Logger.Infof("Use input creator IDs: %v", in.InputCreatorIDs)
 		return in.InputCreatorIDs, nil
 	}
 

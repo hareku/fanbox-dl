@@ -142,13 +142,21 @@ var app = &cli.App{
 
 		idLister := &fanbox.CreatorIDLister{
 			OfficialAPIClient: api,
+			Logger:            logger,
 		}
-		ids, err := idLister.Do(ctx, &fanbox.CreatorIDListerDoInput{
-			InputCreatorIDs:   strings.Split(c.String(creatorFlag.Name), ","),
-			IgnoreCreatorIDs:  strings.Split(c.String(ignoreCreatorFlag.Name), ","),
+
+		in := &fanbox.CreatorIDListerDoInput{
 			IncludeSupporting: c.Bool(supportingFlag.Name),
 			IncludeFollowing:  c.Bool(followingFlag.Name),
-		})
+		}
+		if c.String(creatorFlag.Name) != "" {
+			in.InputCreatorIDs = strings.Split(c.String(creatorFlag.Name), ",")
+		}
+		if c.String(ignoreCreatorFlag.Name) != "" {
+			in.IgnoreCreatorIDs = strings.Split(c.String(ignoreCreatorFlag.Name), ",")
+		}
+
+		ids, err := idLister.Do(ctx, in)
 		if err != nil {
 			return fmt.Errorf("failed to resolve creator IDs: %w", err)
 		}
