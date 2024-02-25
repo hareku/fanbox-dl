@@ -54,7 +54,7 @@ var dirByPlanFlag = &cli.BoolFlag{
 var allFlag = &cli.BoolFlag{
 	Name:  "all",
 	Value: false,
-	Usage: "Whether to check all posts. If --all=false, finish to download when found an already downloaded image.",
+	Usage: "Whether to check all posts. If --all=false, finish to crawling posts when found an already downloaded image.",
 }
 var supportingFlag = &cli.BoolFlag{
 	Name:  "supporting",
