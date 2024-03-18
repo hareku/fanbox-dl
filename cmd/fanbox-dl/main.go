@@ -167,7 +167,7 @@ var app = &cli.App{
 			}
 		}
 
-		logger.Infof("Completed (after %v).", time.Since(startedAt))
+		logger.Infof("Completed (after %v).", time.Since(startedAt).Round(time.Millisecond*100))
 		return nil
 	},
 }
