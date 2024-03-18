@@ -2,10 +2,13 @@ package fanbox
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 // Client is the struct for Client.
@@ -102,9 +105,18 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 				}
 
 				c.Logger.Infof("Downloading %dth %s of %s\n", order, assetType, post.Title)
-				err = c.download(ctx, post, order, d)
-				if err != nil {
-					return fmt.Errorf("download error: %w", err)
+				for retry := 0; retry < 3; retry++ {
+					if err = c.download(ctx, post, order, d); err != nil {
+						// fanbox API sometimes forcibly closes the connection when downloading files many times, so retry.
+						var opErr *net.OpError
+						if errors.As(err, &opErr) {
+							c.Logger.Errorf("Download error(net.OpError), retrying. %s", opErr.Error())
+							time.Sleep(time.Second)
+							continue
+						}
+						return fmt.Errorf("download error: %w", err)
+					}
+					break
 				}
 			}
 		}
