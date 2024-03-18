@@ -158,7 +158,7 @@ var app = &cli.App{
 
 		ids, err := idLister.Do(ctx, in)
 		if err != nil {
-			return fmt.Errorf("failed to resolve creator IDs: %w", err)
+			return fmt.Errorf("resolve creator IDs: %w", err)
 		}
 		for _, id := range ids {
 			logger.Infof("Started downloading of %q.", id)
@@ -175,7 +175,7 @@ var app = &cli.App{
 func main() {
 	if err := run(); err != nil {
 		log.Printf("%s ERROR LOG %s", strings.Repeat("=", 5), strings.Repeat("=", 5))
-		log.Printf("fanbox-dl failed to run: %s", err)
+		log.Printf("fanbox-dl error: %s", err)
 		log.Println(strings.Repeat("=", 21))
 
 		log.Printf("The error log seems a bug, please open an issue on GitHub: %s.", "https://github.com/hareku/fanbox-dl/issues")

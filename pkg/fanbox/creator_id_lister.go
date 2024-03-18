@@ -50,7 +50,7 @@ func (c *CreatorIDLister) all(ctx context.Context, in *CreatorIDListerDoInput) (
 		plans := PlanListSupportingResponse{}
 		err := c.OfficialAPIClient.RequestAndUnwrapJSON(ctx, http.MethodGet, "https://api.fanbox.cc/plan.listSupporting", &plans)
 		if err != nil {
-			return nil, fmt.Errorf("failed to list supporintg plans: %w", err)
+			return nil, fmt.Errorf("list supporintg plans: %w", err)
 		}
 		for _, p := range plans.Body {
 			ids[p.CreatorID] = nil
@@ -61,7 +61,7 @@ func (c *CreatorIDLister) all(ctx context.Context, in *CreatorIDListerDoInput) (
 		following := PlanListSupportingResponse{}
 		err := c.OfficialAPIClient.RequestAndUnwrapJSON(ctx, http.MethodGet, "https://api.fanbox.cc/creator.listFollowing", &following)
 		if err != nil {
-			return nil, fmt.Errorf("failed to list following creators: %w", err)
+			return nil, fmt.Errorf("list following creators: %w", err)
 		}
 		for _, f := range following.Body {
 			ids[f.CreatorID] = nil

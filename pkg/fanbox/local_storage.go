@@ -26,13 +26,13 @@ func (s *LocalStorage) Save(post Post, order int, d Downloadable, r io.Reader) e
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, 0775)
 		if err != nil {
-			return fmt.Errorf("failed to create a directory (%s): %w", dir, err)
+			return fmt.Errorf("create a directory (%s): %w", dir, err)
 		}
 	}
 
 	file, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE, 0775)
 	if err != nil {
-		return fmt.Errorf("failed to open a file: %w", err)
+		return fmt.Errorf("open a file: %w", err)
 	}
 	defer file.Close()
 
@@ -58,7 +58,7 @@ func (s *LocalStorage) Exist(post Post, order int, d Downloadable) (bool, error)
 		return false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("failed to stat file: %w", err)
+		return false, fmt.Errorf("stat file: %w", err)
 	}
 
 	return true, nil
@@ -77,7 +77,7 @@ func (s *LocalStorage) limitOsSafely(name string) string {
 func (s *LocalStorage) makeFileName(post Post, order int, d Downloadable) string {
 	date, err := time.Parse(time.RFC3339, post.PublishedDateTime)
 	if err != nil {
-		panic(fmt.Errorf("failed to parse post published date time %s: %w", post.PublishedDateTime, err))
+		panic(fmt.Errorf("parse post published date time %s: %w", post.PublishedDateTime, err))
 	}
 
 	title := strings.TrimSpace(filename.EscapeString(post.Title, "-"))

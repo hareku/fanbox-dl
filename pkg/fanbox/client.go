@@ -31,7 +31,7 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 		content := ListCreatorResponse{}
 		err := c.OfficialAPIClient.RequestAndUnwrapJSON(ctx, http.MethodGet, nextURL, &content)
 		if err != nil {
-			return fmt.Errorf("failed to list posts of %q: %w", creatorID, err)
+			return fmt.Errorf("list posts of %q: %w", creatorID, err)
 		}
 		c.Logger.Debugf("Found %d posts in %s", len(content.Body.Items), nextURL)
 
@@ -47,7 +47,7 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 				fmt.Sprintf("https://api.fanbox.cc/post.info?postId=%s", item.ID),
 				&postResp)
 			if err != nil {
-				return fmt.Errorf("failed to get post: %w", err)
+				return fmt.Errorf("get post: %w", err)
 			}
 			post := postResp.Body
 
@@ -79,7 +79,7 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 
 				isDownloaded, err := c.Storage.Exist(post, order, d)
 				if err != nil {
-					return fmt.Errorf("failed to check whether does %s exist: %w", assetType, err)
+					return fmt.Errorf("check whether does %s exist: %w", assetType, err)
 				}
 
 				if isDownloaded {
@@ -133,7 +133,7 @@ func (c *Client) download(ctx context.Context, post Post, order int, d Downloada
 	}
 
 	if err := c.Storage.Save(post, order, d, resp.Body); err != nil {
-		return fmt.Errorf("failed to save a file: %w", err)
+		return fmt.Errorf("save a file: %w", err)
 	}
 
 	return nil
