@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/hareku/go-filename"
 	"github.com/hareku/go-strlimit"
@@ -74,13 +75,26 @@ func (s *LocalStorage) limitOsSafely(name string) string {
 	}
 }
 
+func normalizeTitle(title string) string {
+	title = filename.EscapeString(title, "-")
+	title = strings.Map(func(r rune) rune {
+		if unicode.IsPrint(r) {
+			return r
+		}
+		return -1
+	}, title)
+	title = strings.TrimSpace(title)
+
+	return title
+}
+
 func (s *LocalStorage) makeFileName(post Post, order int, d Downloadable) string {
 	date, err := time.Parse(time.RFC3339, post.PublishedDateTime)
 	if err != nil {
 		panic(fmt.Errorf("parse post published date time %s: %w", post.PublishedDateTime, err))
 	}
 
-	title := strings.TrimSpace(filename.EscapeString(post.Title, "-"))
+	title := normalizeTitle(post.Title)
 	fileType := ""
 	// for backward-compatibility, insert "-file-" identifier
 	if _, ok := d.(File); ok {
