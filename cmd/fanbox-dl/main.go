@@ -22,6 +22,9 @@ func resolveSessionID(c *cli.Context) string {
 	if v := os.Getenv("FANBOXSESSID"); v != "" {
 		return v
 	}
+	if v := os.Getenv("FANBOX_COOKIE"); v != "" {
+		return v
+	}
 
 	return ""
 }
@@ -39,6 +42,11 @@ var ignoreCreatorFlag = &cli.StringFlag{
 var sessIDFlag = &cli.StringFlag{
 	Name:     "sessid",
 	Usage:    "FANBOXSESSID which is stored in Cookies. If this is not set, fanbox-dl refers FANBOXSESSID environment value.",
+	Required: false,
+}
+var cookieFlag = &cli.StringFlag{
+	Name:     "cookie",
+	Usage:    "Cookie for Fanbox API. This value overrides FANBOXSESSID environment value.",
 	Required: false,
 }
 var saveDirFlag = &cli.StringFlag{
@@ -94,6 +102,7 @@ var app = &cli.App{
 		creatorFlag,
 		ignoreCreatorFlag,
 		sessIDFlag,
+		cookieFlag,
 		saveDirFlag,
 		dirByPostFlag,
 		dirByPlanFlag,
@@ -111,9 +120,12 @@ var app = &cli.App{
 		})
 		logger.Infof("Launching Pixiv FANBOX Downloader!")
 
-		sessID := resolveSessionID(c)
-		if sessID == "" {
-			logger.Infof("Fanbox SessionID is not set. Starting as a guest.")
+		var cookieStr string
+		if sessID := resolveSessionID(c); sessID != "" {
+			cookieStr = fmt.Sprintf("FANBOXSESSID=%s", sessID)
+		}
+		if v := c.String(cookieFlag.Name); v != "" {
+			cookieStr = v
 		}
 
 		httpClient := retryablehttp.NewClient()
@@ -121,7 +133,7 @@ var app = &cli.App{
 
 		api := &fanbox.OfficialAPIClient{
 			HTTPClient: httpClient,
-			SessionID:  sessID,
+			Cookie:     cookieStr,
 		}
 
 		client := &fanbox.Client{
