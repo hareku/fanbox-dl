@@ -14,6 +14,7 @@ import (
 type OfficialAPIClient struct {
 	HTTPClient *retryablehttp.Client
 	Cookie     string
+	UserAgent  string
 }
 
 func (c *OfficialAPIClient) Request(ctx context.Context, method string, url string) (*http.Response, error) {
@@ -25,7 +26,7 @@ func (c *OfficialAPIClient) Request(ctx context.Context, method string, url stri
 	req = req.WithContext(ctx)
 	req.Header.Set("Cookie", c.Cookie)
 	req.Header.Set("Origin", "https://www.fanbox.cc") // If Origin header is not set, FANBOX returns HTTP 400 error.
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+	req.Header.Set("User-Agent", c.UserAgent)
 
 	return c.HTTPClient.Do(req)
 }

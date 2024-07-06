@@ -49,6 +49,11 @@ var cookieFlag = &cli.StringFlag{
 	Usage:    "Cookie for Fanbox API. This value overrides FANBOXSESSID environment value.",
 	Required: false,
 }
+var userAgentFlag = &cli.StringFlag{
+	Name:  "user-agent",
+	Usage: "User-Agent for Fanbox API.",
+	Value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+}
 var saveDirFlag = &cli.StringFlag{
 	Name:  "save-dir",
 	Value: "./images",
@@ -106,6 +111,7 @@ var app = &cli.App{
 		saveDirFlag,
 		dirByPostFlag,
 		dirByPlanFlag,
+		userAgentFlag,
 		allFlag,
 		supportingFlag,
 		followingFlag,
@@ -134,6 +140,7 @@ var app = &cli.App{
 		api := &fanbox.OfficialAPIClient{
 			HTTPClient: httpClient,
 			Cookie:     cookieStr,
+			UserAgent:  c.String(userAgentFlag.Name),
 		}
 
 		client := &fanbox.Client{
