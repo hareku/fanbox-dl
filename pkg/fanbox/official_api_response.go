@@ -1,13 +1,13 @@
 package fanbox
 
-// ListCreatorResponse represents the response of https://api.fanbox.cc/post.listCreator.
-type ListCreatorResponse struct {
-	Body ListCreatorResponseBody `json:"body"`
+// Pagination represents the response of https://api.fanbox.cc/post.paginateCreator?creatorId=x.
+type Pagination struct {
+	Pages []string `json:"body"`
 }
 
-type ListCreatorResponseBody struct {
-	Items   []Post  `json:"items"`
-	NextURL *string `json:"nextUrl"`
+// ListCreatorResponse represents the response of https://api.fanbox.cc/post.listCreator.
+type ListCreatorResponse struct {
+	Body []Post `json:"body"`
 }
 
 // PostInfoResponse represents the response of https://api.fanbox.cc/post.info.

@@ -22,23 +22,24 @@ type Client struct {
 }
 
 func (c *Client) Run(ctx context.Context, creatorID string) error {
-	nextURL := func() string {
-		params := url.Values{}
-		params.Set("creatorId", creatorID)
-		params.Set("limit", "50")
+	var pagination Pagination
+	if err := c.OfficialAPIClient.RequestAndUnwrapJSON(
+		ctx, http.MethodGet,
+		fmt.Sprintf("https://api.fanbox.cc/post.paginateCreator?creatorId=%s", url.QueryEscape(creatorID)),
+		&pagination); err != nil {
+		return fmt.Errorf("get pagination: %w", err)
+	}
+	c.Logger.Debugf("Found %d pages for %s", len(pagination.Pages), creatorID)
 
-		return fmt.Sprintf("https://api.fanbox.cc/post.listCreator?%s", params.Encode())
-	}()
-
-	for {
+	for _, page := range pagination.Pages {
 		content := ListCreatorResponse{}
-		err := c.OfficialAPIClient.RequestAndUnwrapJSON(ctx, http.MethodGet, nextURL, &content)
+		err := c.OfficialAPIClient.RequestAndUnwrapJSON(ctx, http.MethodGet, page, &content)
 		if err != nil {
 			return fmt.Errorf("list posts of %q: %w", creatorID, err)
 		}
-		c.Logger.Debugf("Found %d posts in %s", len(content.Body.Items), nextURL)
+		c.Logger.Debugf("Found %d posts in %s", len(content.Body), page)
 
-		for _, item := range content.Body.Items {
+		for _, item := range content.Body {
 			if item.IsRestricted {
 				c.Logger.Debugf("Skipping a ristricted post: %s %q.", item.PublishedDateTime, item.Title)
 				continue
@@ -120,11 +121,6 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 				}
 			}
 		}
-
-		if content.Body.NextURL == nil {
-			break
-		}
-		nextURL = *content.Body.NextURL
 	}
 
 	return nil
