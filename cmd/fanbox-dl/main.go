@@ -141,6 +141,7 @@ var app = &cli.App{
 			HTTPClient: httpClient,
 			Cookie:     cookieStr,
 			UserAgent:  c.String(userAgentFlag.Name),
+			Logger:     logger,
 		}
 
 		client := &fanbox.Client{
