@@ -106,21 +106,42 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 				}
 
 				c.Logger.Infof("Downloading %dth %s of %s\n", order, assetType, post.Title)
-				for retry := 0; retry < 3; retry++ {
-					if err = c.download(ctx, post, order, d); err != nil {
-						// fanbox API sometimes forcibly closes the connection when downloading files many times, so retry.
-						var opErr *net.OpError
-						if errors.As(err, &opErr) {
-							c.Logger.Errorf("Download error(net.OpError), retrying. %s", opErr.Error())
-							time.Sleep(time.Second)
-							continue
-						}
-						return fmt.Errorf("download error: %w", err)
-					}
-					break
+				if err := c.downloadWithRetry(ctx, post, order, d); err != nil {
+					return fmt.Errorf("download with retry: %w", err)
 				}
 			}
 		}
+	}
+
+	return nil
+}
+
+func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, d Downloadable) error {
+	for retry := 0; retry < 10; retry++ {
+		if retry > 0 {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(time.Second):
+			}
+		}
+
+		if err := c.download(ctx, post, order, d); err != nil {
+			if errors.Is(err, io.ErrUnexpectedEOF) {
+				c.Logger.Errorf("Download error(io.ErrUnexpectedEOF), retrying. %s", err.Error())
+				continue
+			}
+
+			// fanbox API sometimes forcibly closes the connection when downloading files many times, so retry.
+			var opErr *net.OpError
+			if errors.As(err, &opErr) {
+				c.Logger.Errorf("Download error(net.OpError), retrying. %s", opErr.Error())
+				continue
+			}
+
+			return fmt.Errorf("download error: %w", err)
+		}
+		break
 	}
 
 	return nil
