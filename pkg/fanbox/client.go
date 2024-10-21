@@ -109,7 +109,8 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 
 				c.Logger.Infof("Downloading %dth %s of %s\n", order, assetType, post.Title)
 				if err := c.downloadWithRetry(ctx, post, order, d); err != nil {
-					return fmt.Errorf("download with retry: %w", err)
+					c.Logger.Errorf("Download error; skipping file. %s", err.Error())
+					continue
 				}
 			}
 		}
