@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"golang.org/x/net/http2"
 )
 
 // Client is the struct for Client.
@@ -136,6 +138,12 @@ func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, d 
 			var opErr *net.OpError
 			if errors.As(err, &opErr) {
 				c.Logger.Errorf("Download error(net.OpError), retrying. %s", opErr.Error())
+				continue
+			}
+
+			var goAwayErr *http2.GoAwayError
+			if errors.As(err, &goAwayErr) {
+				c.Logger.Errorf("Download error(http2.GoAwayError), retrying. %s", goAwayErr.Error())
 				continue
 			}
 
