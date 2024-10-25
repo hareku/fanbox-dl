@@ -18,6 +18,7 @@ type Client struct {
 	CheckAllPosts     bool
 	DryRun            bool
 	SkipFiles         bool
+	SkipOnError       bool
 	OfficialAPIClient *OfficialAPIClient
 	Storage           *LocalStorage
 	Logger            *Logger
@@ -109,7 +110,11 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 
 				c.Logger.Infof("Downloading %dth %s of %s\n", order, assetType, post.Title)
 				if err := c.downloadWithRetry(ctx, post, order, d); err != nil {
-					return fmt.Errorf("download with retry: %w", err)
+					if c.SkipOnError {
+						c.Logger.Errorf("Skip downloading, because of an error: %s", err.Error())
+						continue
+					}
+					return fmt.Errorf("download: %w", err)
 				}
 			}
 		}
