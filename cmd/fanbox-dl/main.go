@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -196,11 +195,8 @@ var app = &cli.App{
 
 func main() {
 	if err := run(); err != nil {
-		log.Printf("%s ERROR LOG %s", strings.Repeat("=", 5), strings.Repeat("=", 5))
-		log.Printf("fanbox-dl error: %s", err)
-		log.Println(strings.Repeat("=", 21))
-
-		log.Printf("The error log seems a bug, please open an issue on GitHub: %s.", "https://github.com/hareku/fanbox-dl/issues")
+		slog.Error("fanbox-dl Error", "error", err)
+		slog.Error("The error log seems a bug, please open an issue on GitHub", "url", "https://github.com/hareku/fanbox-dl/issues")
 	}
 	os.Exit(0)
 }
