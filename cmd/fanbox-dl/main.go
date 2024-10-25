@@ -99,6 +99,11 @@ var verboseFlag = &cli.BoolFlag{
 	Value: false,
 	Usage: "Whether to output debug logs.",
 }
+var skipOnErrorFlag = &cli.BoolFlag{
+	Name:  "skip-on-error",
+	Value: false,
+	Usage: "Whether to skip downloading instead of exiting when an error occurred.",
+}
 
 var app = &cli.App{
 	Name:  "fanbox-dl",
@@ -118,6 +123,7 @@ var app = &cli.App{
 		skipFiles,
 		dryRunFlag,
 		verboseFlag,
+		skipOnErrorFlag,
 	},
 	Action: func(c *cli.Context) error {
 		logger := fanbox.NewLogger(&fanbox.NewLoggerInput{
@@ -148,6 +154,7 @@ var app = &cli.App{
 			CheckAllPosts:     c.Bool(allFlag.Name),
 			DryRun:            c.Bool(dryRunFlag.Name),
 			SkipFiles:         c.Bool(skipFiles.Name),
+			SkipOnError:       c.Bool(skipOnErrorFlag.Name),
 			OfficialAPIClient: api,
 			Storage: &fanbox.LocalStorage{
 				SaveDir:   c.String(saveDirFlag.Name),
