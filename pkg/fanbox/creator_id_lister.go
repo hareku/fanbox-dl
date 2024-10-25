@@ -3,6 +3,7 @@ package fanbox
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 )
 
@@ -15,7 +16,6 @@ type CreatorIDListerDoInput struct {
 
 type CreatorIDLister struct {
 	OfficialAPIClient *OfficialAPIClient
-	Logger            *Logger
 }
 
 func (c *CreatorIDLister) Do(ctx context.Context, in *CreatorIDListerDoInput) ([]string, error) {
@@ -40,7 +40,7 @@ func (c *CreatorIDLister) Do(ctx context.Context, in *CreatorIDListerDoInput) ([
 
 func (c *CreatorIDLister) all(ctx context.Context, in *CreatorIDListerDoInput) ([]string, error) {
 	if len(in.InputCreatorIDs) > 0 {
-		c.Logger.Infof("Use input creator IDs: %v", in.InputCreatorIDs)
+		slog.Debug("Use input creator IDs", "ids", in.InputCreatorIDs)
 		return in.InputCreatorIDs, nil
 	}
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -21,7 +22,6 @@ type Client struct {
 	SkipOnError       bool
 	OfficialAPIClient *OfficialAPIClient
 	Storage           *LocalStorage
-	Logger            *Logger
 }
 
 func (c *Client) Run(ctx context.Context, creatorID string) error {
@@ -32,7 +32,7 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 		&pagination); err != nil {
 		return fmt.Errorf("get pagination: %w", err)
 	}
-	c.Logger.Debugf("Found %d pages for %s", len(pagination.Pages), creatorID)
+	slog.Debug("Found pages", slog.Int("count", len(pagination.Pages)), slog.String("creatorID", creatorID))
 
 	for _, page := range pagination.Pages {
 		content := ListCreatorResponse{}
@@ -40,11 +40,11 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 		if err != nil {
 			return fmt.Errorf("list posts of %q: %w", creatorID, err)
 		}
-		c.Logger.Debugf("Found %d posts in %s", len(content.Body), page)
+		slog.Debug("Found posts", slog.Int("count", len(content.Body)), slog.String("page", page))
 
 		for _, item := range content.Body {
 			if item.IsRestricted {
-				c.Logger.Debugf("Skipping a ristricted post: %s %q.", item.PublishedDateTime, item.Title)
+				slog.Debug("Skipping restricted post", slog.String("publishedDateTime", item.PublishedDateTime), slog.String("title", item.Title))
 				continue
 			}
 
@@ -80,7 +80,7 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 				}
 
 				if d.GetID() == "" {
-					c.Logger.Infof("Can't download %dth %s of %q: bad URL", order, assetType, post.Title)
+					slog.Info("Can't download", slog.Int("order", order), slog.String("assetType", assetType), slog.String("title", post.Title), slog.String("reason", "bad URL"))
 					continue
 				}
 
@@ -90,28 +90,28 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 				}
 
 				if isDownloaded {
-					c.Logger.Debugf("Already downloaded %dth %s of %q.", order, assetType, post.Title)
+					slog.Debug("Already downloaded", slog.Int("order", order), slog.String("assetType", assetType), slog.String("title", post.Title))
 					if !c.CheckAllPosts {
-						c.Logger.Debugf("No more new files and images.")
+						slog.Debug("No more new files and images")
 						return nil
 					}
 					continue
 				}
 
 				if assetType == "file" && c.SkipFiles {
-					c.Logger.Debugf("Skipping %dth file (not images) of %q.\n", order, post.Title)
+					slog.Debug("Skipping file", slog.Int("order", order), slog.String("title", post.Title))
 					continue
 				}
 
 				if c.DryRun {
-					c.Logger.Infof("[dry-run] Client will download %dth %s of %q.\n", order, assetType, post.Title)
+					slog.Info("[dry-run] Client will download", slog.Int("order", order), slog.String("assetType", assetType), slog.String("title", post.Title))
 					continue
 				}
 
-				c.Logger.Infof("Downloading %dth %s of %s\n", order, assetType, post.Title)
+				slog.Info("Downloading", slog.Int("order", order), slog.String("assetType", assetType), slog.String("title", post.Title))
 				if err := c.downloadWithRetry(ctx, post, order, d); err != nil {
 					if c.SkipOnError {
-						c.Logger.Errorf("Skip downloading, because of an error: %s", err.Error())
+						slog.Error("Skip downloading due to error", slog.String("error", err.Error()))
 						continue
 					}
 					return fmt.Errorf("download: %w", err)
@@ -135,20 +135,20 @@ func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, d 
 
 		if err := c.download(ctx, post, order, d); err != nil {
 			if errors.Is(err, io.ErrUnexpectedEOF) {
-				c.Logger.Errorf("Download error(io.ErrUnexpectedEOF), retrying. %s", err.Error())
+				slog.Error("Download error, retrying", slog.String("type", "io.ErrUnexpectedEOF"), slog.String("error", err.Error()))
 				continue
 			}
 
 			// fanbox API sometimes forcibly closes the connection when downloading files many times, so retry.
 			var opErr *net.OpError
 			if errors.As(err, &opErr) {
-				c.Logger.Errorf("Download error(net.OpError), retrying. %s", opErr.Error())
+				slog.Error("Download error, retrying", slog.String("type", "net.OpError"), slog.String("error", opErr.Error()))
 				continue
 			}
 
 			var goAwayErr *http2.GoAwayError
 			if errors.As(err, &goAwayErr) {
-				c.Logger.Errorf("Download error(http2.GoAwayError), retrying. %s", goAwayErr.Error())
+				slog.Error("Download error, retrying", slog.String("type", "http2.GoAwayError"), slog.String("error", goAwayErr.Error()))
 				continue
 			}
 

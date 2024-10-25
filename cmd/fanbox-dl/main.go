@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
@@ -126,11 +127,8 @@ var app = &cli.App{
 		skipOnErrorFlag,
 	},
 	Action: func(c *cli.Context) error {
-		logger := fanbox.NewLogger(&fanbox.NewLoggerInput{
-			Out:     os.Stdout,
-			Verbose: c.Bool(verboseFlag.Name),
-		})
-		logger.Infof("Launching Pixiv FANBOX Downloader!")
+		initLogger(c.Bool(verboseFlag.Name))
+		slog.Info("Launching Pixiv FANBOX Downloader!")
 
 		var cookieStr string
 		if sessID := resolveSessionID(c); sessID != "" {
@@ -141,13 +139,12 @@ var app = &cli.App{
 		}
 
 		httpClient := retryablehttp.NewClient()
-		httpClient.Logger = logger
+		httpClient.Logger = slog.Default()
 
 		api := &fanbox.OfficialAPIClient{
 			HTTPClient: httpClient,
 			Cookie:     cookieStr,
 			UserAgent:  c.String(userAgentFlag.Name),
-			Logger:     logger,
 		}
 
 		client := &fanbox.Client{
@@ -161,7 +158,6 @@ var app = &cli.App{
 				DirByPost: c.Bool(dirByPostFlag.Name),
 				DirByPlan: c.Bool(dirByPlanFlag.Name),
 			},
-			Logger: logger,
 		}
 
 		ctx := c.Context
@@ -169,7 +165,6 @@ var app = &cli.App{
 
 		idLister := &fanbox.CreatorIDLister{
 			OfficialAPIClient: api,
-			Logger:            logger,
 		}
 
 		in := &fanbox.CreatorIDListerDoInput{
@@ -188,13 +183,13 @@ var app = &cli.App{
 			return fmt.Errorf("resolve creator IDs: %w", err)
 		}
 		for _, id := range ids {
-			logger.Infof("Started downloading of %q.", id)
+			slog.InfoContext(ctx, "Start downloading", "creator_id", id)
 			if err := client.Run(ctx, id); err != nil {
 				return fmt.Errorf("failed downloading of %q: %w", id, err)
 			}
 		}
 
-		logger.Infof("Completed (after %v).", time.Since(startedAt).Round(time.Millisecond*100))
+		slog.InfoContext(ctx, "Completed.", "duration", time.Since(startedAt).Round(time.Millisecond*100))
 		return nil
 	},
 }
@@ -218,4 +213,17 @@ func run() error {
 		return err
 	}
 	return nil
+}
+
+func initLogger(verbose bool) {
+	level := slog.LevelInfo
+	if verbose {
+		level = slog.LevelDebug
+	}
+
+	h := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: level,
+	})
+	logger := slog.New(h)
+	slog.SetDefault(logger)
 }

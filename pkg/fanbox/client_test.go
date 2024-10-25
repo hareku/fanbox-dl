@@ -111,12 +111,7 @@ func TestClient_Run(t *testing.T) {
 		},
 	}
 
-	logger := fanbox.NewLogger(&fanbox.NewLoggerInput{
-		Out:     os.Stdout,
-		Verbose: true,
-	})
 	httpClient := retryablehttp.NewClient()
-	httpClient.Logger = logger
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("config:%+v", tt.config), func(t *testing.T) {
@@ -138,7 +133,6 @@ func TestClient_Run(t *testing.T) {
 					DirByPost: tt.config.dirByPost,
 					DirByPlan: tt.config.dirByPlan,
 				},
-				Logger: logger,
 			}
 
 			require.NoError(t, client.Run(context.Background(), "oneshotatenno"))

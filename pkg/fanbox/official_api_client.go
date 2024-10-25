@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"reflect"
@@ -17,7 +18,6 @@ type OfficialAPIClient struct {
 	HTTPClient *retryablehttp.Client
 	Cookie     string
 	UserAgent  string
-	Logger     *Logger
 }
 
 func (c *OfficialAPIClient) Request(ctx context.Context, method string, url string) (*http.Response, error) {
@@ -58,7 +58,7 @@ func (c *OfficialAPIClient) RequestAndUnwrapJSON(ctx context.Context, method str
 	var r io.Reader
 	switch resp.Header.Get("Content-Encoding") {
 	case "gzip":
-		c.Logger.Debugf("Response is gzip encoded")
+		slog.Debug("Response is gzip encoded")
 		gr, err := gzip.NewReader(resp.Body)
 		if err != nil {
 			return fmt.Errorf("gzip reader error: %w", err)
@@ -66,13 +66,13 @@ func (c *OfficialAPIClient) RequestAndUnwrapJSON(ctx context.Context, method str
 		r = gr
 		defer gr.Close()
 	default:
-		c.Logger.Debugf("Response is unexpected encoding: %s", resp.Header.Get("Content-Encoding"))
+		slog.Debug("Response is unexpected encoding", "encoding", resp.Header.Get("Content-Encoding"))
 		r = resp.Body
 	}
 
 	if err = json.NewDecoder(r).Decode(v); err != nil {
 		if dump, dumpErr := httputil.DumpResponse(resp, false); dumpErr == nil {
-			c.Logger.Debugf("Response dump: %s", dump)
+			slog.Debug("Response dump", "dump", string(dump))
 		}
 		return fmt.Errorf("json decoding error: %w", err)
 	}
