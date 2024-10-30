@@ -19,6 +19,10 @@ The latest binary can be downloaded [here](https://github.com/hareku/fanbox-dl/r
 
 2. Execute the downloaded `fanbox-dl` binary. You can see usage by running `fanbox-dl --help`.
 
+> [!NOTE]
+> 
+> `--sessid` and `--cookie` can not be used together; when both are used, `--cookie` will be used.
+
 | Command | Description | Usage | Default |
 | --- | --- | --- | ---: |
 | sessid | Requires FANBOXSESSID which is stored in browser Cookies for login state. <br>When not provided, refers FANBOXSESSID environment value. <br>If unavailable, only free posts are downloaded when accompanied by a `creator` flag. | `--sessid xxxxx` | `NULL` |
@@ -34,7 +38,7 @@ The latest binary can be downloaded [here](https://github.com/hareku/fanbox-dl/r
 | skip-on-error | Will skip downloading instead of exiting when an error occurs. | `--skip-on-error` | `false` |
 | dry-run | Will skip downloading all content from creators. | `--dry-run` | `false` |
 | verbose | Gives more detailed information about commands being executed by the application. <br>Useful for debugging errors. | `--verbose` | `false` |
-| save-dir | Root directory to save content. <br>Put directory in double quotes `"` if it contains spaces. <br> Supports relative and absolute directories. | `--savedir ./content` | `./images` |
+| save-dir | Root directory to save content. <br>Put directory in double quotes `"` if it contains spaces. <br> Supports relative and absolute directories. | `--save-dir ./content` | `./images` |
 | user-agent | User agent to use for requests. | `--user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"` | `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3` |
 
 ### Example
