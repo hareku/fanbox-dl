@@ -16,3 +16,8 @@
 
 # Download dir
 images/
+
+# logs
+*.log
+
+dist/
