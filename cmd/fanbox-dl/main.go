@@ -29,6 +29,17 @@ func resolveSessionID(c *cli.Context) string {
 	return ""
 }
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
+var versionFlag = &cli.BoolFlag{
+	Name:  "version",
+	Value: false,
+	Usage: "Print the version.",
+}
 var creatorFlag = &cli.StringFlag{
 	Name:     "creator",
 	Usage:    "Comma separated creator IDs to download. DO NOT prepend '@' to the creator ID.",
@@ -109,6 +120,7 @@ var app = &cli.App{
 	Name:  "fanbox-dl",
 	Usage: "This CLI downloads images of supporting and following creators.",
 	Flags: []cli.Flag{
+		versionFlag,
 		creatorFlag,
 		ignoreCreatorFlag,
 		sessIDFlag,
@@ -128,6 +140,11 @@ var app = &cli.App{
 	Action: func(c *cli.Context) error {
 		initLogger(c.Bool(verboseFlag.Name))
 		slog.Info("Launching Pixiv FANBOX Downloader!")
+
+		if c.Bool(versionFlag.Name) {
+			slog.Info("Version", "version", version, "commit", commit, "date", date)
+			return nil
+		}
 
 		var cookieStr string
 		if sessID := resolveSessionID(c); sessID != "" {
