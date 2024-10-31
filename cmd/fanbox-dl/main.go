@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -154,6 +155,16 @@ var app = &cli.App{
 
 		httpClient := retryablehttp.NewClient()
 		httpClient.Logger = slog.Default()
+		httpClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+			if err != nil {
+				return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+			}
+			b, err := fanbox.IsFailedToThumbnailingErr(resp)
+			if err == nil && b {
+				return false, fanbox.ErrFailedToThumbnailing
+			}
+			return retryablehttp.DefaultRetryPolicy(ctx, resp, nil)
+		}
 
 		api := &fanbox.OfficialAPIClient{
 			HTTPClient: httpClient,

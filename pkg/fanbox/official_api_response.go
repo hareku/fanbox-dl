@@ -48,6 +48,7 @@ type Block struct {
 type Downloadable interface {
 	GetID() string
 	GetURL() string
+	GetThumbnailURL() (string, bool)
 	GetExtension() string
 }
 
@@ -67,15 +68,20 @@ func (f File) GetURL() string {
 	return f.URL
 }
 
+func (f File) GetThumbnailURL() (string, bool) {
+	return "", false
+}
+
 func (f File) GetExtension() string {
 	return f.Extension
 }
 
 // Image represents a uploaded image.
 type Image struct {
-	ID          string `json:"id"`
-	Extension   string `json:"extension"`
-	OriginalURL string `json:"originalUrl"`
+	ID           string `json:"id"`
+	Extension    string `json:"extension"`
+	OriginalURL  string `json:"originalUrl"`
+	ThumbnailURL string `json:"thumbnailUrl"`
 }
 
 func (i Image) GetID() string {
@@ -84,6 +90,10 @@ func (i Image) GetID() string {
 
 func (i Image) GetURL() string {
 	return i.OriginalURL
+}
+
+func (i Image) GetThumbnailURL() (string, bool) {
+	return i.ThumbnailURL, true
 }
 
 func (i Image) GetExtension() string {

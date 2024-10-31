@@ -1,12 +1,14 @@
 package fanbox
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
+	"mime"
 	"net/http"
 	"net/http/httputil"
 	"reflect"
@@ -77,4 +79,33 @@ func (c *OfficialAPIClient) RequestAndUnwrapJSON(ctx context.Context, method str
 		return fmt.Errorf("json decoding error: %w", err)
 	}
 	return nil
+}
+
+var ErrFailedToThumbnailing = fmt.Errorf("failed to thumbnailing")
+
+// fanbox returns HTTP 500 error and response body is "failed to thumbnailing"
+// when the image is not available (e.g. too large).
+func IsFailedToThumbnailingErr(resp *http.Response) (bool, error) {
+	if resp.StatusCode != 500 {
+		return false, nil
+	}
+	mediaType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+	if err != nil {
+		return false, fmt.Errorf("parse content type: %w", err)
+	}
+	if mediaType != "text/plain" {
+		return false, nil
+	}
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, fmt.Errorf("read response body: %w", err)
+	}
+	resp.Body.Close()
+	resp.Body = io.NopCloser(bytes.NewReader(b))
+
+	if string(b) == "failed to thumbnailing" {
+		return true, nil
+	}
+	return false, nil
 }
