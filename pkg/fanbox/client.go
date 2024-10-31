@@ -80,7 +80,7 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 				}
 
 				if d.GetID() == "" {
-					slog.Info("Can't download", slog.Int("order", order), slog.String("assetType", assetType), slog.String("title", post.Title), slog.String("reason", "bad URL"))
+					slog.Info("Can't download", slog.Int("i", order), slog.String("title", post.Title), slog.String("reason", "bad URL"))
 					continue
 				}
 
@@ -90,7 +90,7 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 				}
 
 				if isDownloaded {
-					slog.Debug("Already downloaded", slog.Int("order", order), slog.String("assetType", assetType), slog.String("title", post.Title))
+					slog.Debug("Already downloaded", slog.Int("i", order), slog.String("title", post.Title))
 					if !c.CheckAllPosts {
 						slog.Debug("No more new files and images")
 						return nil

@@ -4,11 +4,10 @@ test:
 	go test ./...
 
 build:
-	go build -o fanbox-dl.exe cmd/fanbox-dl/main.go
+	goreleaser build --single-target --skip=validate --clean
 
-# make release TAG=vx.x.x
-TAG =
-release:
+# make tag TAG=vx.x.x
+tag:
 	git checkout develop
 	git push origin develop
 	git checkout main
@@ -18,3 +17,8 @@ release:
 	git tag ${TAG}
 	git push origin tag ${TAG}
 	git checkout develop
+
+release:
+	goreleaser release --snapshot --clean
+	goreleaser check
+	goreleaser release
