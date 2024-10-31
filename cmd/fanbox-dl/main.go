@@ -38,7 +38,7 @@ var (
 var versionFlag = &cli.BoolFlag{
 	Name:  "version",
 	Value: false,
-	Usage: "Print the version.",
+	Usage: "Print the version and exit.",
 }
 var creatorFlag = &cli.StringFlag{
 	Name:     "creator",
@@ -139,10 +139,8 @@ var app = &cli.App{
 	},
 	Action: func(c *cli.Context) error {
 		initLogger(c.Bool(verboseFlag.Name))
-		slog.Info("Launching Pixiv FANBOX Downloader!")
-
+		slog.Info("Launching Pixiv FANBOX Downloader!", "version", version, "commit", commit, "date", date)
 		if c.Bool(versionFlag.Name) {
-			slog.Info("Version", "version", version, "commit", commit, "date", date)
 			return nil
 		}
 
