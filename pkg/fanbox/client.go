@@ -28,8 +28,13 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 	var pagination Pagination
 	if err := c.OfficialAPIClient.RequestAndUnwrapJSON(
 		ctx, http.MethodGet,
-		fmt.Sprintf("https://api.fanbox.cc/post.paginateCreator?creatorId=%s", url.QueryEscape(creatorID)),
-		&pagination); err != nil {
+		fmt.Sprintf("https://api.fanbox.cc/post.paginateCreator?%s", func() string {
+			q := url.Values{}
+			q.Set("creatorId", creatorID)
+			return q.Encode()
+		}()),
+		&pagination,
+	); err != nil {
 		return fmt.Errorf("get pagination: %w", err)
 	}
 	slog.Debug("Found pages", slog.Int("count", len(pagination.Pages)), slog.String("creatorID", creatorID))
