@@ -113,8 +113,8 @@ func TestClient_Run(t *testing.T) {
 
 	httpClient := retryablehttp.NewClient()
 
-	for _, tt := range tests {
-		t.Run(fmt.Sprintf("config:%+v", tt.config), func(t *testing.T) {
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("%d_config:%+v", i, tt.config), func(t *testing.T) {
 			saveDir, err := os.MkdirTemp("", "fanbox-dl-testing-")
 			require.NoError(t, err)
 			t.Cleanup(func() {

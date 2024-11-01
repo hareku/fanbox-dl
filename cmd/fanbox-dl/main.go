@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hareku/fanbox-dl/internal/applog"
 	"github.com/hareku/fanbox-dl/pkg/fanbox"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/urfave/cli/v2"
@@ -139,7 +140,7 @@ var app = &cli.App{
 		skipOnErrorFlag,
 	},
 	Action: func(c *cli.Context) error {
-		initLogger(c.Bool(verboseFlag.Name))
+		applog.InitLogger(c.Bool(verboseFlag.Name))
 		slog.Info("Launching Pixiv FANBOX Downloader!", "version", version, "commit", commit, "date", date)
 		if c.Bool(versionFlag.Name) {
 			return nil
@@ -235,17 +236,4 @@ func run() error {
 		return err
 	}
 	return nil
-}
-
-func initLogger(verbose bool) {
-	level := slog.LevelInfo
-	if verbose {
-		level = slog.LevelDebug
-	}
-
-	h := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: level,
-	})
-	logger := slog.New(h)
-	slog.SetDefault(logger)
 }

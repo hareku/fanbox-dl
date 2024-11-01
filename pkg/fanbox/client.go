@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/hareku/fanbox-dl/internal/ctxval"
 	"golang.org/x/net/http2"
 )
 
@@ -25,6 +26,8 @@ type Client struct {
 }
 
 func (c *Client) Run(ctx context.Context, creatorID string) error {
+	ctx = ctxval.AddSlogAttrs(ctx, slog.String("creator_id", creatorID))
+
 	var pagination Pagination
 	if err := c.OfficialAPIClient.RequestAndUnwrapJSON(
 		ctx, http.MethodGet,
@@ -37,92 +40,126 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 	); err != nil {
 		return fmt.Errorf("get pagination: %w", err)
 	}
-	slog.Debug("Found pages", slog.Int("count", len(pagination.Pages)), slog.String("creatorID", creatorID))
+	slog.DebugContext(ctx, "Found pages", "pages", len(pagination.Pages))
 
-	for _, page := range pagination.Pages {
+	for i, page := range pagination.Pages {
 		content := ListCreatorResponse{}
 		err := c.OfficialAPIClient.RequestAndUnwrapJSON(ctx, http.MethodGet, page, &content)
 		if err != nil {
 			return fmt.Errorf("list posts of %q: %w", creatorID, err)
 		}
-		slog.Debug("Found posts", slog.Int("count", len(content.Body)), slog.String("page", page))
+		slog.DebugContext(ctx, "Found posts",
+			"page", i+1,
+			"posts", len(content.Body),
+		)
 
-		for _, item := range content.Body {
-			if item.IsRestricted {
-				slog.Debug("Skipping restricted post", slog.String("publishedDateTime", item.PublishedDateTime), slog.String("title", item.Title))
-				continue
-			}
-
-			postResp := PostInfoResponse{}
-			err := c.OfficialAPIClient.RequestAndUnwrapJSON(
-				ctx, http.MethodGet,
-				fmt.Sprintf("https://api.fanbox.cc/post.info?postId=%s", item.ID),
-				&postResp)
-			if err != nil {
-				return fmt.Errorf("get post: %w", err)
-			}
-			post := postResp.Body
-
-			// for backward-compatibility, split downloadable file's order into two.
-			imgOrder := 0
-			fileOrder := 0
-
-			for _, d := range post.ListDownloadable() {
-				var order int
-				var assetType string
-
-				switch d.(type) {
-				case Image:
-					assetType = "image"
-					order = imgOrder
-					imgOrder++
-				case File:
-					assetType = "file"
-					order = fileOrder
-					fileOrder++
-				default:
-					return fmt.Errorf("unsupported asset type: %+v", d)
-				}
-
-				if d.GetID() == "" {
-					slog.Info("Can't download", slog.Int("i", order), slog.String("title", post.Title), slog.String("reason", "bad URL"))
-					continue
-				}
-
-				isDownloaded, err := c.Storage.Exist(post, order, d)
-				if err != nil {
-					return fmt.Errorf("check whether does %s exist: %w", assetType, err)
-				}
-
-				if isDownloaded {
-					slog.Debug("Already downloaded", slog.Int("i", order), slog.String("title", post.Title))
-					if !c.CheckAllPosts {
-						slog.Debug("No more new files and images")
-						return nil
-					}
-					continue
-				}
-
-				if assetType == "file" && c.SkipFiles {
-					slog.Debug("Skipping file", slog.Int("order", order), slog.String("title", post.Title))
-					continue
-				}
-
-				if c.DryRun {
-					slog.Info("[dry-run] Client will download", slog.Int("order", order), slog.String("assetType", assetType), slog.String("title", post.Title))
-					continue
-				}
-
-				slog.Info("Downloading", slog.Int("order", order), slog.String("assetType", assetType), slog.String("title", post.Title))
-				if err := c.downloadWithRetry(ctx, post, order, d); err != nil {
-					if c.SkipOnError {
-						slog.Error("Skip downloading due to error", slog.String("error", err.Error()))
-						continue
-					}
-					return fmt.Errorf("download: %w", err)
-				}
-			}
+		if err := c.handlePage(ctx, &content); err != nil {
+			return fmt.Errorf("handle page: %w", err)
 		}
+	}
+
+	return nil
+}
+
+func (c *Client) handlePage(ctx context.Context, content *ListCreatorResponse) error {
+	for _, item := range content.Body {
+		if err := c.handlePost(ctx, item); err != nil {
+			return fmt.Errorf("handle post: %w", err)
+		}
+	}
+	return nil
+}
+
+func (c *Client) handlePost(ctx context.Context, item Post) error {
+	ctx = ctxval.AddSlogAttrs(ctx, slog.String("title", item.Title), slog.String("published_at", item.PublishedDateTime))
+
+	if item.IsRestricted {
+		slog.DebugContext(ctx, "Skipping restricted post")
+		return nil
+	}
+
+	postResp := PostInfoResponse{}
+	if err := c.OfficialAPIClient.RequestAndUnwrapJSON(
+		ctx, http.MethodGet,
+		fmt.Sprintf("https://api.fanbox.cc/post.info?%s", func() string {
+			q := url.Values{}
+			q.Set("postId", item.ID)
+			return q.Encode()
+		}()),
+		&postResp,
+	); err != nil {
+		return fmt.Errorf("get post: %w", err)
+	}
+	post := postResp.Body
+
+	// for backward-compatibility, split downloadable file's order into two types
+	var (
+		nextImgOrder  int
+		nextFileOrder int
+	)
+	for i, d := range post.ListDownloadable() {
+		var (
+			order     int
+			assetType string
+		)
+
+		switch d.(type) {
+		case Image:
+			assetType = "image"
+			order = nextImgOrder
+			nextImgOrder++
+		case File:
+			assetType = "file"
+			order = nextFileOrder
+			nextFileOrder++
+		default:
+			return fmt.Errorf("unsupported asset type: %+v", d)
+		}
+
+		if err := c.handleAsset(
+			ctxval.AddSlogAttrs(ctx, slog.Int("i", i), slog.String("asset_type", assetType)),
+			post, order, d,
+		); err != nil {
+			return fmt.Errorf("handle %s: %w", assetType, err)
+		}
+	}
+
+	return nil
+}
+
+func (c *Client) handleAsset(ctx context.Context, post Post, order int, d Downloadable) error {
+	if _, ok := d.(File); ok && c.SkipFiles {
+		slog.DebugContext(ctx, "Skip downloading files")
+		return nil
+	}
+
+	if d.GetID() == "" {
+		slog.DebugContext(ctx, "Asset ID is empty")
+		return nil
+	}
+
+	isDownloaded, err := c.Storage.Exist(post, order, d)
+	if err != nil {
+		return fmt.Errorf("check whether downloaded: %w", err)
+	}
+
+	if isDownloaded {
+		slog.DebugContext(ctx, "Already downloaded")
+		return nil
+	}
+
+	if c.DryRun {
+		slog.InfoContext(ctx, "Skip downloading due to dry-run mode")
+		return nil
+	}
+
+	slog.InfoContext(ctx, "Downloading")
+	if err := c.downloadWithRetry(ctx, post, order, d); err != nil {
+		if c.SkipOnError {
+			slog.ErrorContext(ctx, "Skip downloading due to error", "error", err)
+			return nil
+		}
+		return fmt.Errorf("download: %w", err)
 	}
 
 	return nil
@@ -150,7 +187,7 @@ func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, d 
 				return fmt.Errorf("download error: %w", err)
 			}
 
-			slog.Error("Download error, retrying", "error", err, "wait", waitDur)
+			slog.ErrorContext(ctx, "Download error, retrying", "error", err, "wait", waitDur)
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
@@ -175,6 +212,7 @@ func (c *Client) download(ctx context.Context, post Post, order int, d Downloada
 				return fmt.Errorf("thumbnail URL is not found")
 			}
 			slog.InfoContext(ctx, "Downloading a thumbnail", "thumbnail_url", tu)
+
 			resp, err = c.OfficialAPIClient.Request(ctx, http.MethodGet, tu)
 			if err != nil {
 				return fmt.Errorf("request error (%s): %w", tu, err)
