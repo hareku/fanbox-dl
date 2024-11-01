@@ -55,10 +55,16 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 		)
 
 		if err := c.handlePage(ctx, &content); err != nil {
-			return fmt.Errorf("handle page: %w", err)
+			if !errors.Is(err, errAlreadyDownloaded) {
+				return fmt.Errorf("handle page: %w", err)
+			}
+
+			if c.CheckAllPosts {
+				continue
+			}
+			return nil
 		}
 	}
-
 	return nil
 }
 
@@ -128,6 +134,8 @@ func (c *Client) handlePost(ctx context.Context, item Post) error {
 	return nil
 }
 
+var errAlreadyDownloaded = errors.New("already downloaded")
+
 func (c *Client) handleAsset(ctx context.Context, post Post, order int, d Downloadable) error {
 	if _, ok := d.(File); ok && c.SkipFiles {
 		slog.DebugContext(ctx, "Skip downloading files")
@@ -150,7 +158,7 @@ func (c *Client) handleAsset(ctx context.Context, post Post, order int, d Downlo
 
 	if isDownloaded {
 		slog.DebugContext(ctx, "Already downloaded")
-		return nil
+		return errAlreadyDownloaded
 	}
 
 	if c.DryRun {
