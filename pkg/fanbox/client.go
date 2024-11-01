@@ -124,39 +124,37 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 }
 
 func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, d Downloadable) error {
+	shouldRetry := func(err error) bool {
+		if errors.Is(err, io.ErrUnexpectedEOF) {
+			return true
+		}
+
+		var opErr *net.OpError
+		if errors.As(err, &opErr) {
+			return true
+		}
+
+		var goAwayErr *http2.GoAwayError
+		return errors.As(err, &goAwayErr)
+	}
+
+	waitDur := time.Second
 	for retry := 0; retry < 10; retry++ {
-		if retry > 0 {
+		if err := c.download(ctx, post, order, d); err != nil {
+			if !shouldRetry(err) {
+				return fmt.Errorf("download error: %w", err)
+			}
+
+			slog.Error("Download error, retrying", "error", err, "wait", waitDur)
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case <-time.After(time.Second):
+			case <-time.After(waitDur):
 			}
-		}
-
-		if err := c.download(ctx, post, order, d); err != nil {
-			if errors.Is(err, io.ErrUnexpectedEOF) {
-				slog.Error("Download error, retrying", slog.String("type", "io.ErrUnexpectedEOF"), slog.String("error", err.Error()))
-				continue
-			}
-
-			// fanbox API sometimes forcibly closes the connection when downloading files many times, so retry.
-			var opErr *net.OpError
-			if errors.As(err, &opErr) {
-				slog.Error("Download error, retrying", slog.String("type", "net.OpError"), slog.String("error", opErr.Error()))
-				continue
-			}
-
-			var goAwayErr *http2.GoAwayError
-			if errors.As(err, &goAwayErr) {
-				slog.Error("Download error, retrying", slog.String("type", "http2.GoAwayError"), slog.String("error", goAwayErr.Error()))
-				continue
-			}
-
-			return fmt.Errorf("download error: %w", err)
+			continue
 		}
 		break
 	}
-
 	return nil
 }
 
