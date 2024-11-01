@@ -35,6 +35,7 @@ The latest binary can be downloaded [here](https://github.com/hareku/fanbox-dl/r
 | dir-by-post | Separates content saved into directories based on the title of the post. <br>Stored inside the plan directory when accompanied by the `dir-by-plan` flag. | `--dir-by-post` | `false` |
 | all | Will ensure that all content is downloaded from creators. <br>Will also redownload content that might already be present locally. | `--all` | `false` |
 | skip-files | Will skip downloading non-image files from creators. | `--skip-files` | `false` |
+| skip-images | Will skip downloading images from creators. This is useful when you only want to download files. | `--skip-images` | `false` |
 | skip-on-error | Will skip downloading instead of exiting when an error occurs. | `--skip-on-error` | `false` |
 | dry-run | Will skip downloading all content from creators. | `--dry-run` | `false` |
 | verbose | Gives more detailed information about commands being executed by the application. <br>Useful for debugging errors. | `--verbose` | `false` |

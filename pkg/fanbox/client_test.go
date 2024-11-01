@@ -16,10 +16,11 @@ import (
 
 func TestClient_Run(t *testing.T) {
 	type config struct {
-		dryRun    bool
-		skipFiles bool
-		dirByPost bool
-		dirByPlan bool
+		dryRun     bool
+		skipFiles  bool
+		skipImages bool
+		dirByPost  bool
+		dirByPlan  bool
 	}
 
 	tests := []struct {
@@ -103,9 +104,17 @@ func TestClient_Run(t *testing.T) {
 		},
 		{
 			config: config{
-				dryRun:    true,
-				skipFiles: true,
-				dirByPost: true,
+				skipFiles:  true,
+				skipImages: true,
+			},
+			wantFiles: nil,
+		},
+		{
+			config: config{
+				dryRun:     true,
+				skipFiles:  true,
+				skipImages: true,
+				dirByPost:  true,
 			},
 			wantFiles: nil,
 		},
@@ -125,6 +134,7 @@ func TestClient_Run(t *testing.T) {
 				CheckAllPosts: true,
 				DryRun:        tt.config.dryRun,
 				SkipFiles:     tt.config.skipFiles,
+				SkipImages:    tt.config.skipImages,
 				OfficialAPIClient: &fanbox.OfficialAPIClient{
 					HTTPClient: httpClient,
 				},

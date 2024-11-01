@@ -102,6 +102,11 @@ var skipFiles = &cli.BoolFlag{
 	Value: false,
 	Usage: "Whether to skip downloading files (not images).",
 }
+var skipImages = &cli.BoolFlag{
+	Name:  "skip-images",
+	Value: false,
+	Usage: "Whether to skip downloading images.",
+}
 var dryRunFlag = &cli.BoolFlag{
 	Name:  "dry-run",
 	Value: false,
@@ -135,6 +140,7 @@ var app = &cli.App{
 		supportingFlag,
 		followingFlag,
 		skipFiles,
+		skipImages,
 		dryRunFlag,
 		verboseFlag,
 		skipOnErrorFlag,
@@ -177,6 +183,7 @@ var app = &cli.App{
 			CheckAllPosts:     c.Bool(allFlag.Name),
 			DryRun:            c.Bool(dryRunFlag.Name),
 			SkipFiles:         c.Bool(skipFiles.Name),
+			SkipImages:        c.Bool(skipImages.Name),
 			SkipOnError:       c.Bool(skipOnErrorFlag.Name),
 			OfficialAPIClient: api,
 			Storage: &fanbox.LocalStorage{

@@ -20,6 +20,7 @@ type Client struct {
 	CheckAllPosts     bool
 	DryRun            bool
 	SkipFiles         bool
+	SkipImages        bool
 	SkipOnError       bool
 	OfficialAPIClient *OfficialAPIClient
 	Storage           *LocalStorage
@@ -130,6 +131,10 @@ func (c *Client) handlePost(ctx context.Context, item Post) error {
 func (c *Client) handleAsset(ctx context.Context, post Post, order int, d Downloadable) error {
 	if _, ok := d.(File); ok && c.SkipFiles {
 		slog.DebugContext(ctx, "Skip downloading files")
+		return nil
+	}
+	if _, ok := d.(Image); ok && c.SkipImages {
+		slog.DebugContext(ctx, "Skip downloading images")
 		return nil
 	}
 
