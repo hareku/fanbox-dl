@@ -55,14 +55,11 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 		)
 
 		if err := c.handlePage(ctx, &content); err != nil {
-			if !errors.Is(err, errAlreadyDownloaded) {
-				return fmt.Errorf("handle page: %w", err)
+			if errors.Is(err, errAlreadyDownloaded) {
+				slog.DebugContext(ctx, "No more new assets")
+				return nil
 			}
-
-			if c.CheckAllPosts {
-				continue
-			}
-			return nil
+			return fmt.Errorf("handle page: %w", err)
 		}
 	}
 	return nil
@@ -127,6 +124,9 @@ func (c *Client) handlePost(ctx context.Context, item Post) error {
 			ctxval.AddSlogAttrs(ctx, slog.Int("i", i), slog.String("asset_type", assetType)),
 			post, order, d,
 		); err != nil {
+			if errors.Is(err, errAlreadyDownloaded) && c.CheckAllPosts {
+				continue
+			}
 			return fmt.Errorf("handle %s: %w", assetType, err)
 		}
 	}
