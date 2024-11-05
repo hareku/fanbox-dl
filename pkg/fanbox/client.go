@@ -127,6 +127,10 @@ func (c *Client) handlePost(ctx context.Context, item Post) error {
 			if errors.Is(err, errAlreadyDownloaded) && c.CheckAllPosts {
 				continue
 			}
+			if c.SkipOnError {
+				slog.ErrorContext(ctx, "Skip downloading due to error", "error", err)
+				continue
+			}
 			return fmt.Errorf("handle %s: %w", assetType, err)
 		}
 	}
@@ -168,10 +172,6 @@ func (c *Client) handleAsset(ctx context.Context, post Post, order int, d Downlo
 
 	slog.InfoContext(ctx, "Downloading")
 	if err := c.downloadWithRetry(ctx, post, order, d); err != nil {
-		if c.SkipOnError {
-			slog.ErrorContext(ctx, "Skip downloading due to error", "error", err)
-			return nil
-		}
 		return fmt.Errorf("download: %w", err)
 	}
 
