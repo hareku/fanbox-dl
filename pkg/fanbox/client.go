@@ -59,6 +59,10 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 				slog.DebugContext(ctx, "No more new assets")
 				return nil
 			}
+			if c.SkipOnError {
+				slog.ErrorContext(ctx, "Skip downloading page due to error", "error", err)
+				continue
+			}
 			return fmt.Errorf("handle page: %w", err)
 		}
 	}
@@ -68,6 +72,10 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 func (c *Client) handlePage(ctx context.Context, content *ListCreatorResponse) error {
 	for _, item := range content.Body {
 		if err := c.handlePost(ctx, item); err != nil {
+			if c.SkipOnError {
+				slog.ErrorContext(ctx, "Skip downloading post due to error", "error", err)
+				continue
+			}
 			return fmt.Errorf("handle post: %w", err)
 		}
 	}
