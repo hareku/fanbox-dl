@@ -19,4 +19,4 @@ tag:
 	git checkout develop
 
 release:
-	goreleaser release
+	goreleaser release --clean
