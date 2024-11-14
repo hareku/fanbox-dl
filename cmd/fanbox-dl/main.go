@@ -231,6 +231,7 @@ func main() {
 	if err := run(); err != nil {
 		slog.Error("fanbox-dl Error", "error", err)
 		slog.Error("The error log seems a bug, please open an issue on GitHub", "url", "https://github.com/hareku/fanbox-dl/issues")
+		os.Exit(1)
 	}
 	os.Exit(0)
 }
