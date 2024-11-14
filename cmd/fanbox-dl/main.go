@@ -122,6 +122,11 @@ var skipOnErrorFlag = &cli.BoolFlag{
 	Value: false,
 	Usage: "Whether to skip downloading instead of exiting when an error occurred.",
 }
+var removeUnprintableCharsFlag = &cli.BoolFlag{
+	Name:  "remove-unprintable-chars",
+	Value: false,
+	Usage: "Whether to remove unprintable characters from file names.",
+}
 
 var app = &cli.App{
 	Name:  "fanbox-dl",
@@ -144,6 +149,7 @@ var app = &cli.App{
 		dryRunFlag,
 		verboseFlag,
 		skipOnErrorFlag,
+		removeUnprintableCharsFlag,
 	},
 	Action: func(c *cli.Context) error {
 		applog.InitLogger(c.Bool(verboseFlag.Name))
@@ -190,6 +196,8 @@ var app = &cli.App{
 				SaveDir:   c.String(saveDirFlag.Name),
 				DirByPost: c.Bool(dirByPostFlag.Name),
 				DirByPlan: c.Bool(dirByPlanFlag.Name),
+
+				RemoveUnprintableChars: c.Bool(removeUnprintableCharsFlag.Name),
 			},
 		}
 

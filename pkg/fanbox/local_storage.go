@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/hareku/go-filename"
 	"github.com/hareku/go-strlimit"
@@ -17,6 +18,8 @@ type LocalStorage struct {
 	SaveDir   string
 	DirByPost bool
 	DirByPlan bool
+
+	RemoveUnprintableChars bool
 }
 
 func (s *LocalStorage) Save(post Post, order int, d Downloadable, r io.Reader) error {
@@ -81,6 +84,15 @@ func (s *LocalStorage) makeFileName(post Post, order int, d Downloadable) string
 	}
 
 	title := strings.TrimSpace(filename.EscapeString(post.Title, "-"))
+	if s.RemoveUnprintableChars {
+		title = strings.Map(func(r rune) rune {
+			if unicode.IsPrint(r) {
+				return r
+			}
+			return -1
+		}, title)
+	}
+
 	fileType := ""
 	// for backward-compatibility, insert "-file-" identifier
 	if _, ok := d.(File); ok {
