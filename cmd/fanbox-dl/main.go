@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -239,6 +240,10 @@ func main() {
 	if err := run(); err != nil {
 		slog.Error("fanbox-dl Error", "error", err)
 		slog.Error("The error log seems a bug, please open an issue on GitHub", "url", "https://github.com/hareku/fanbox-dl/issues")
+
+		if errors.Is(err, fanbox.ErrStatusForbidden) {
+			slog.Error("This 403 error may occur when connecting from an IP address outside of Japan. Please try again from VPN or other IP addresses in Japan.")
+		}
 		os.Exit(1)
 	}
 	os.Exit(0)

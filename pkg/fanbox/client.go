@@ -217,6 +217,8 @@ func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, d 
 	return nil
 }
 
+var ErrStatusForbidden = errors.New("status code 403")
+
 func (c *Client) download(ctx context.Context, post Post, order int, d Downloadable) error {
 	var resp *http.Response
 
@@ -245,6 +247,9 @@ func (c *Client) download(ctx context.Context, post Post, order int, d Downloada
 	}()
 
 	if resp.StatusCode != 200 {
+		if resp.StatusCode == 403 {
+			return ErrStatusForbidden
+		}
 		return fmt.Errorf("status code %d", resp.StatusCode)
 	}
 
