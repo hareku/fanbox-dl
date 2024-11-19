@@ -68,6 +68,10 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 func (c *Client) handlePage(ctx context.Context, content *ListCreatorResponse) error {
 	for _, item := range content.Body {
 		if err := c.handlePost(ctx, item); err != nil {
+			// pinned posts are maybe not latest, we should check next posts
+			if errors.Is(err, errAlreadyDownloaded) && item.IsPinned {
+				continue
+			}
 			return fmt.Errorf("handle post: %w", err)
 		}
 	}

@@ -23,6 +23,7 @@ type Post struct {
 	CreatorID         string    `json:"creatorId"`
 	FeeRequired       int       `json:"feeRequired"`
 	IsRestricted      bool      `json:"isRestricted"`
+	IsPinned          bool      `json:"isPinned"`
 	Body              *PostBody `json:"body"`
 }
 
