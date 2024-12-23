@@ -157,6 +157,11 @@ func (c *Client) handleAsset(ctx context.Context, post Post, order int, d Downlo
 
 	isDownloaded, err := c.Storage.Exist(post, order, d)
 	if err != nil {
+		if c.SkipOnError {
+			slog.ErrorContext(ctx, "Skip downloading due to error", "error", err)
+			return nil
+		}
+
 		return fmt.Errorf("check whether downloaded: %w", err)
 	}
 
