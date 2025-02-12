@@ -1,22 +1,39 @@
-name: test
-on:
-  push:
-  schedule:
-    - cron: '0 0 * * *'
+name: Test
+on: [push]
+
+env:
+  GO_VERSION: 1.24
+
 jobs:
-  testing:
+
+  test:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          fetch-depth: 0
-      -
-        name: Set up Go
-        uses: actions/setup-go@v2
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+      - run: go test ./...
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: 1.23
-      -
-        name: Test
-        run: go test ./...
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+      - run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - run: govulncheck ./...
