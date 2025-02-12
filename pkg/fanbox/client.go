@@ -247,8 +247,8 @@ func (c *Client) download(ctx context.Context, post Post, order int, d Downloada
 	}
 
 	defer func() {
-		io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
 	}()
 
 	if resp.StatusCode != 200 {
