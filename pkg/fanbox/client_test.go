@@ -1,3 +1,5 @@
+//go:build integration
+
 package fanbox_test
 
 import (
