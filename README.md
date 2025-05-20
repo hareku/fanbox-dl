@@ -42,6 +42,8 @@ The latest binary can be downloaded [here](https://github.com/hareku/fanbox-dl/r
 | save-dir | Root directory to save content. <br>Put directory in double quotes `"` if it contains spaces. <br> Supports relative and absolute directories. | `--save-dir ./content` | `./images` |
 | user-agent | User agent to use for requests. | `--user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"` | `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3` |
 | remove-unprintable-chars | Removes unprintable characters from the file name. In some environments, unprintable characters are not allowed in file names. | `--remove-unprintable-chars` | `false` |
+| start-date | Only download posts published on or after this date. Format: YYYY-MM-DD | `--start-date 2023-01-01` | `NULL` |
+| end-date | Only download posts published on or before this date. Format: YYYY-MM-DD | `--end-date 2023-12-31` | `NULL` |
 
 ### Example
 
