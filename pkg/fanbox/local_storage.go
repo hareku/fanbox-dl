@@ -67,6 +67,50 @@ func (s *LocalStorage) Exist(post Post, order int, d Downloadable) (bool, error)
 	return true, nil
 }
 
+// SaveText saves the text content of a post to a text file
+func (s *LocalStorage) SaveText(post Post) error {
+	textContent := post.GetTextContent()
+	if textContent == "" {
+		return nil
+	}
+
+	name := s.makeTextFileName(post)
+
+	dir := filepath.Dir(name)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0775)
+		if err != nil {
+			return fmt.Errorf("create a directory (%s): %w", dir, err)
+		}
+	}
+
+	file, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE, 0775)
+	if err != nil {
+		return fmt.Errorf("open a file: %w", err)
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(textContent)
+	if err != nil {
+		return fmt.Errorf("write text content: %w", err)
+	}
+
+	return nil
+}
+
+// TextExists checks if the text file already exists
+func (s *LocalStorage) TextExists(post Post) (bool, error) {
+	_, err := os.Stat(s.makeTextFileName(post))
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("stat file: %w", err)
+	}
+
+	return true, nil
+}
+
 // limitOsSafely limits the string length for OS safely.
 func (s *LocalStorage) limitOsSafely(name string) string {
 	switch runtime.GOOS {
@@ -134,5 +178,47 @@ func (s *LocalStorage) makeFileName(post Post, order int, d Downloadable) string
 			),
 			d.GetExtension(),
 		),
+	)
+}
+
+// makeTextFileName generates the filename for the text content
+func (s *LocalStorage) makeTextFileName(post Post) string {
+	date, err := time.Parse(time.RFC3339, post.PublishedDateTime)
+	if err != nil {
+		panic(fmt.Errorf("parse post published date time %s: %w", post.PublishedDateTime, err))
+	}
+
+	title := strings.TrimSpace(filename.EscapeString(post.Title, "-"))
+	if s.RemoveUnprintableChars {
+		title = strings.Map(func(r rune) rune {
+			if unicode.IsPrint(r) {
+				return r
+			}
+			return -1
+		}, title)
+	}
+
+	planDir := ""
+	if s.DirByPlan {
+		planDir = fmt.Sprintf("%dyen", post.FeeRequired)
+	}
+
+	if s.DirByPost {
+		// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]/post.txt
+		return filepath.Join(
+			s.SaveDir,
+			post.CreatorID,
+			planDir,
+			s.limitOsSafely(fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), title)),
+			"post.txt",
+		)
+	}
+
+	// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]-post.txt
+	return filepath.Join(
+		s.SaveDir,
+		post.CreatorID,
+		planDir,
+		s.limitOsSafely(fmt.Sprintf("%s-%s-post.txt", date.UTC().Format("2006-01-02"), title)),
 	)
 }

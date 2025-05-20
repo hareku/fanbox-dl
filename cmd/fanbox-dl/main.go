@@ -108,6 +108,11 @@ var skipImages = &cli.BoolFlag{
 	Value: false,
 	Usage: "Whether to skip downloading images.",
 }
+var skipTexts = &cli.BoolFlag{
+    Name:  "skip-texts",
+    Value: false,
+    Usage: "Whether to skip downloading post contents as text files.",
+}
 var dryRunFlag = &cli.BoolFlag{
 	Name:  "dry-run",
 	Value: false,
@@ -159,6 +164,7 @@ var app = &cli.App{
 		followingFlag,
 		skipFiles,
 		skipImages,
+		skipTexts,
 		dryRunFlag,
 		verboseFlag,
 		skipOnErrorFlag,
@@ -225,6 +231,7 @@ var app = &cli.App{
 			DryRun:            c.Bool(dryRunFlag.Name),
 			SkipFiles:         c.Bool(skipFiles.Name),
 			SkipImages:        c.Bool(skipImages.Name),
+			SkipTexts:         c.Bool(skipTexts.Name),
 			SkipOnError:       c.Bool(skipOnErrorFlag.Name),
 			OfficialAPIClient: api,
 			StartDate:         startDate,

@@ -21,6 +21,7 @@ type Client struct {
 	DryRun            bool
 	SkipFiles         bool
 	SkipImages        bool
+	SkipTexts         bool
 	SkipOnError       bool
 	OfficialAPIClient *OfficialAPIClient
 	Storage           *LocalStorage
@@ -46,7 +47,7 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 	slog.DebugContext(ctx, "Found pages", "pages", len(pagination.Pages))
 
 	if c.StartDate != nil || c.EndDate != nil {
-		slog.InfoContext(ctx, "Date filtering active", 
+		slog.InfoContext(ctx, "Date filtering active",
 			"start_date", c.formatDateOrNil(c.StartDate),
 			"end_date", c.formatDateOrNil(c.EndDate))
 	}
@@ -133,6 +134,11 @@ func (c *Client) handlePost(ctx context.Context, item Post) error {
 	}
 	post := postResp.Body
 
+	// Handle text content
+	if err := c.handlePostText(ctx, post); err != nil {
+		return fmt.Errorf("handle post text: %w", err)
+	}
+
 	// for backward-compatibility, split downloadable file's order into two types
 	var (
 		nextImgOrder  int
@@ -166,6 +172,50 @@ func (c *Client) handlePost(ctx context.Context, item Post) error {
 			}
 			return fmt.Errorf("handle %s: %w", assetType, err)
 		}
+	}
+
+	return nil
+}
+
+// handlePostText handles saving text content of a post.
+func (c *Client) handlePostText(ctx context.Context, post Post) error {
+	if c.SkipTexts {
+		slog.DebugContext(ctx, "Skip saving text content")
+		return nil
+	}
+
+	textContent := post.GetTextContent()
+	if textContent == "" {
+		slog.DebugContext(ctx, "No text content to save")
+		return nil
+	}
+
+	isDownloaded, err := c.Storage.TextExists(post)
+	if err != nil {
+		if c.SkipOnError {
+			slog.ErrorContext(ctx, "Skip saving text due to error", "error", err)
+			return nil
+		}
+		return fmt.Errorf("check whether text already saved: %w", err)
+	}
+
+	if isDownloaded {
+		slog.DebugContext(ctx, "Text content already saved")
+		return nil
+	}
+
+	if c.DryRun {
+		slog.InfoContext(ctx, "Skip saving text content due to dry-run mode")
+		return nil
+	}
+
+	slog.InfoContext(ctx, "Saving text content")
+	if err := c.Storage.SaveText(post); err != nil {
+		if c.SkipOnError {
+			slog.ErrorContext(ctx, "Skip saving text due to error", "error", err)
+			return nil
+		}
+		return fmt.Errorf("save text content: %w", err)
 	}
 
 	return nil

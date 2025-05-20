@@ -1,5 +1,9 @@
 package fanbox
 
+import (
+	"strings"
+)
+
 // Pagination represents the response of https://api.fanbox.cc/post.paginateCreator?creatorId=x.
 type Pagination struct {
 	Pages []string `json:"body"`
@@ -38,10 +42,45 @@ type PostBody struct {
 	ImageMap *map[string]Image `json:"imageMap"`
 	// FileMap is not nil if post type is "blog".
 	FileMap *map[string]File `json:"fileMap"`
+	// Text is for simple text in post type "image"/"file".
+	Text string `json:"text"`
+}
+
+func (p *Post) GetTextContent() string {
+	if p.Body != nil {
+		return p.Body.ExtractText()
+	}
+	return ""
+}
+
+func (pb *PostBody) ExtractText() string {
+	var textContent strings.Builder
+
+	// Handle article/blog type posts with blocks
+	if pb.Blocks != nil {
+		for _, block := range *pb.Blocks {
+			if block.Type == "p" && block.Text != "" {
+				textContent.WriteString(block.Text)
+				textContent.WriteString("\n\n")
+			} else if block.Type == "image" && block.ImageID != nil {
+				textContent.WriteString("[Image: " + *block.ImageID + "]\n\n")
+			} else if block.Type == "file" && block.FileID != nil {
+				textContent.WriteString("[File: " + *block.FileID + "]\n\n")
+			}
+		}
+	}
+
+	// Handle other type posts with text field
+	if textContent.Len() == 0 && pb.Text != "" {
+		textContent.WriteString(pb.Text)
+	}
+
+	return strings.TrimSpace(textContent.String())
 }
 
 type Block struct {
 	Type    string  `json:"type"` // p(text) or image.
+	Text    string  `json:"text"` // Text content for "p" type blocks
 	ImageID *string `json:"imageId"`
 	FileID  *string `json:"fileId"`
 }
