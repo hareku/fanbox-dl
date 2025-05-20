@@ -137,6 +137,19 @@ func (s *LocalStorage) makeFileName(post Post, order int, d Downloadable) string
 		}, title)
 	}
 
+	// Get display name (file name or ID)
+	displayName := d.GetName()
+	// Escape the display name to make it file system safe
+	displayName = filename.EscapeString(displayName, "-")
+	if s.RemoveUnprintableChars {
+		displayName = strings.Map(func(r rune) rune {
+			if unicode.IsPrint(r) {
+				return r
+			}
+			return -1
+		}, displayName)
+	}
+
 	fileType := ""
 	// for backward-compatibility, insert "-file-" identifier
 	if _, ok := d.(File); ok {
@@ -149,17 +162,17 @@ func (s *LocalStorage) makeFileName(post Post, order int, d Downloadable) string
 	}
 
 	if s.DirByPost {
-		// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]/[Order]-[ID].[Extension]
+		// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]/[Order]-[Name].[Extension]
 		return filepath.Join(
 			s.SaveDir,
 			post.CreatorID,
 			planDir,
 			s.limitOsSafely(fmt.Sprintf("%s-%s", date.UTC().Format("2006-01-02"), title)),
-			fmt.Sprintf("%s%d-%s.%s", fileType, order, d.GetID(), d.GetExtension()),
+			fmt.Sprintf("%s%d-%s.%s", fileType, order, displayName, d.GetExtension()),
 		)
 	}
 
-	// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]-[Order]-[ID].[Extension]
+	// [SaveDirectory]/[CreatorID]/2006-01-02-[Post Title]-[Order]-[Name].[Extension]
 	return filepath.Join(
 		s.SaveDir,
 		post.CreatorID,
@@ -173,7 +186,7 @@ func (s *LocalStorage) makeFileName(post Post, order int, d Downloadable) string
 					title,
 					fileType,
 					order,
-					d.GetID(),
+					displayName,
 				),
 			),
 			d.GetExtension(),

@@ -1,6 +1,7 @@
 package fanbox
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -54,28 +55,53 @@ func (p *Post) GetTextContent() string {
 }
 
 func (pb *PostBody) ExtractText() string {
-	var textContent strings.Builder
-
-	// Handle article/blog type posts with blocks
-	if pb.Blocks != nil {
-		for _, block := range *pb.Blocks {
-			if block.Type == "p" && block.Text != "" {
-				textContent.WriteString(block.Text)
-				textContent.WriteString("\n\n")
-			} else if block.Type == "image" && block.ImageID != nil {
-				textContent.WriteString("[Image: " + *block.ImageID + "]\n\n")
-			} else if block.Type == "file" && block.FileID != nil {
-				textContent.WriteString("[File: " + *block.FileID + "]\n\n")
-			}
-		}
-	}
-
-	// Handle other type posts with text field
-	if textContent.Len() == 0 && pb.Text != "" {
-		textContent.WriteString(pb.Text)
-	}
-
-	return strings.TrimSpace(textContent.String())
+    var textContent strings.Builder
+    
+    // Handle article/blog type posts with blocks
+    if pb.Blocks != nil {
+        for _, block := range *pb.Blocks {
+            if block.Type == "p" && block.Text != "" {
+                textContent.WriteString(block.Text)
+                textContent.WriteString("\n\n")
+            } else if block.Type == "image" && block.ImageID != nil {
+                textContent.WriteString("[Image: " + *block.ImageID + "]\n\n")
+            } else if block.Type == "file" && block.FileID != nil {
+                fileInfo := (*pb.FileMap)[*block.FileID]
+                fileLabel := fileInfo.ID
+                if fileInfo.Name != "" {
+                    fileLabel = fileInfo.Name
+                }
+                textContent.WriteString("[File: " + fileLabel + "." + fileInfo.Extension + "]\n\n")
+            }
+        }
+    }
+    
+    // Handle image type posts with text field
+    if textContent.Len() == 0 && pb.Text != "" {
+        textContent.WriteString(pb.Text)
+        
+        // Add file information at the end for file-type posts
+        if pb.Files != nil {
+            textContent.WriteString("\n\n--- Files ---\n")
+            for _, file := range *pb.Files {
+                fileLabel := file.ID
+                if file.Name != "" {
+                    fileLabel = file.Name
+                }
+                textContent.WriteString(fmt.Sprintf("[File: %s.%s]\n", fileLabel, file.Extension))
+            }
+        }
+        
+        // Add image information at the end for image-type posts
+        if pb.Images != nil {
+            textContent.WriteString("\n\n--- Images ---\n")
+            for _, img := range *pb.Images {
+                textContent.WriteString(fmt.Sprintf("[Image: %s.%s]\n", img.ID, img.Extension))
+            }
+        }
+    }
+    
+    return strings.TrimSpace(textContent.String())
 }
 
 type Block struct {
@@ -90,6 +116,7 @@ type Downloadable interface {
 	GetURL() string
 	GetThumbnailURL() (string, bool)
 	GetExtension() string
+	GetName() string // New method to get the display name
 }
 
 // File represents a uploaded file.
@@ -116,6 +143,13 @@ func (f File) GetExtension() string {
 	return f.Extension
 }
 
+func (f File) GetName() string {
+	if f.Name != "" {
+		return f.Name
+	}
+	return f.ID
+}
+
 // Image represents a uploaded image.
 type Image struct {
 	ID           string `json:"id"`
@@ -138,6 +172,10 @@ func (i Image) GetThumbnailURL() (string, bool) {
 
 func (i Image) GetExtension() string {
 	return i.Extension
+}
+
+func (i Image) GetName() string {
+	return i.ID // Images don't have names in the API response, use ID instead
 }
 
 func (f *Post) ListDownloadable() []Downloadable {
