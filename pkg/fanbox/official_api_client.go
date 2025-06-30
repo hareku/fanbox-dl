@@ -31,6 +31,7 @@ func (c *OfficialAPIClient) Request(ctx context.Context, method string, url stri
 	req = req.WithContext(ctx)
 	req.Header.Set("Cookie", c.Cookie)
 	req.Header.Set("Origin", "https://www.fanbox.cc") // If Origin header is not set, FANBOX returns HTTP 400 error.
+	req.Header.Set("Referer", "https://www.fanbox.cc/")
 	req.Header.Set("User-Agent", c.UserAgent)
 	req.Header.Set("Accept", "application/json, text/plain, */*")
 	req.Header.Set("Accept-Encoding", "gzip")
