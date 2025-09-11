@@ -1,8 +1,6 @@
 module github.com/hareku/fanbox-dl
 
-go 1.24.1
-
-toolchain go1.24.7
+go 1.25
 
 require (
 	github.com/bogdanfinn/fhttp v0.6.0
@@ -20,8 +18,8 @@ require (
 	github.com/Dharmey747/quic-go-utls v1.0.3-utls // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/bogdanfinn/utls v1.7.3-barnius // indirect
-	github.com/cloudflare/circl v1.5.0 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
+	github.com/cloudflare/circl v1.6.1 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
