@@ -2,7 +2,6 @@ package fanbox
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -58,22 +57,7 @@ func (c *OfficialAPIClient) RequestAndUnwrapJSON(ctx context.Context, method str
 		return fmt.Errorf("status is %s", resp.Status)
 	}
 
-	var r io.Reader
-	switch resp.Header.Get("Content-Encoding") {
-	case "gzip":
-		slog.Debug("Response is gzip encoded")
-		gr, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return fmt.Errorf("gzip reader error: %w", err)
-		}
-		r = gr
-		defer gr.Close()
-	default:
-		slog.Debug("Response is unexpected encoding", "encoding", resp.Header.Get("Content-Encoding"))
-		r = resp.Body
-	}
-
-	if err = json.NewDecoder(r).Decode(v); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(v); err != nil {
 		if dump, dumpErr := httputil.DumpResponse(resp, false); dumpErr == nil {
 			slog.Debug("Response dump", "dump", string(dump))
 		}
