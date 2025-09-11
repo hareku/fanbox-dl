@@ -37,7 +37,9 @@ func (s *LocalStorage) Save(post Post, order int, d Downloadable, r io.Reader) e
 	if err != nil {
 		return fmt.Errorf("open a file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	_, err = io.Copy(file, r)
 	if err != nil {
