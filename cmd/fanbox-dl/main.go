@@ -63,7 +63,7 @@ var sessIDFlag = &cli.StringFlag{
 }
 var cookieFlag = &cli.StringFlag{
 	Name:     "cookie",
-	Usage:    "Cookie for Fanbox API. This value overrides FANBOXSESSID environment value.",
+	Usage:    "Cookie for Fanbox API. This value overrides FANBOXSESSID.",
 	Required: false,
 }
 var userAgentFlag = &cli.StringFlag{
@@ -164,9 +164,14 @@ var app = &cli.App{
 
 		var cookieStr string
 		if sessID := resolveSessionID(c); sessID != "" {
+			slog.Debug("Using session ID", "sessid_bytes", len(sessID))
 			cookieStr = fmt.Sprintf("FANBOXSESSID=%s", sessID)
 		}
 		if v := c.String(cookieFlag.Name); v != "" {
+			if cookieStr != "" {
+				slog.Warn("session ID and cookie are set, cookie option overrides session ID option")
+			}
+			slog.Debug("Using cookie", "cookie_bytes", len(v))
 			cookieStr = v
 		}
 
