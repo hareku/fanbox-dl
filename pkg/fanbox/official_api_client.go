@@ -86,7 +86,7 @@ func IsFailedToThumbnailingErr(resp *http.Response) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("read response body: %w", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	resp.Body = io.NopCloser(bytes.NewReader(b))
 
 	if string(b) == "failed to thumbnailing" {

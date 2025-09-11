@@ -49,7 +49,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		// Close the original response body if conversion fails
 		if fResp != nil && fResp.Body != nil {
-			fResp.Body.Close()
+			_ = fResp.Body.Close()
 		}
 		return nil, err
 	}
