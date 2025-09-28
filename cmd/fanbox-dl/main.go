@@ -131,6 +131,23 @@ var removeUnprintableCharsFlag = &cli.BoolFlag{
 	Value: false,
 	Usage: "Whether to remove unprintable characters from file names.",
 }
+var requestTimeoutFlag = &cli.IntFlag{
+	Name:  "request-timeout",
+	Value: 30,
+	Usage: "Timeout for each requests in seconds",
+}
+
+var startDateFlag = &cli.StringFlag{
+	Name:  "start-date",
+	Usage: "Only download posts published after this date (format: YYYY-MM-DD).",
+	Value: "",
+}
+
+var endDateFlag = &cli.StringFlag{
+	Name:  "end-date",
+	Usage: "Only download posts published before this date (format: YYYY-MM-DD).",
+	Value: "",
+}
 
 var app = &cli.App{
 	Name:  "fanbox-dl",
@@ -154,6 +171,9 @@ var app = &cli.App{
 		verboseFlag,
 		skipOnErrorFlag,
 		removeUnprintableCharsFlag,
+		requestTimeoutFlag,
+		startDateFlag,
+		endDateFlag,
 	},
 	Action: func(c *cli.Context) error {
 		applog.InitLogger(c.Bool(verboseFlag.Name))
@@ -175,6 +195,26 @@ var app = &cli.App{
 			cookieStr = v
 		}
 
+		// Parse date ranges if provided
+		var startDate, endDate *time.Time
+		if startDateStr := c.String(startDateFlag.Name); startDateStr != "" {
+			parsedTime, err := time.Parse("2006-01-02", startDateStr)
+			if err != nil {
+				return fmt.Errorf("invalid start date format (use YYYY-MM-DD): %w", err)
+			}
+			startDate = &parsedTime
+		}
+
+		if endDateStr := c.String(endDateFlag.Name); endDateStr != "" {
+			parsedTime, err := time.Parse("2006-01-02", endDateStr)
+			if err != nil {
+				return fmt.Errorf("invalid end date format (use YYYY-MM-DD): %w", err)
+			}
+			// Set end date to the end of the specified day
+			parsedTime = parsedTime.Add(24*time.Hour - time.Second)
+			endDate = &parsedTime
+		}
+
 		httpClient := retryablehttp.NewClient()
 		httpClient.Logger = slog.Default()
 		httpClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
@@ -188,7 +228,12 @@ var app = &cli.App{
 			return retryablehttp.DefaultRetryPolicy(ctx, resp, nil)
 		}
 
-		tlsTransp, err := tlsclient.NewTransportWithOptions(tls_client.NewNoopLogger(), tls_client.WithClientProfile(profiles.Chrome_133))
+		requestTimeout := c.Int(requestTimeoutFlag.Name)
+		tlsTransp, err := tlsclient.NewTransportWithOptions(
+			tls_client.NewNoopLogger(),
+			tls_client.WithClientProfile(profiles.Chrome_133),
+			tls_client.WithTimeoutSeconds(requestTimeout),
+		)
 		if err != nil {
 			return fmt.Errorf("create tls transport: %w", err)
 		}
@@ -207,6 +252,8 @@ var app = &cli.App{
 			SkipImages:        c.Bool(skipImages.Name),
 			SkipOnError:       c.Bool(skipOnErrorFlag.Name),
 			OfficialAPIClient: api,
+			StartDate:         startDate,
+			EndDate:           endDate,
 			Storage: &fanbox.LocalStorage{
 				SaveDir:   c.String(saveDirFlag.Name),
 				DirByPost: c.Bool(dirByPostFlag.Name),
