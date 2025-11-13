@@ -21,9 +21,12 @@ type Client struct {
 	DryRun            bool
 	SkipFiles         bool
 	SkipImages        bool
+	SkipTexts         bool
 	SkipOnError       bool
 	OfficialAPIClient *OfficialAPIClient
 	Storage           *LocalStorage
+	StartDate         *time.Time
+	EndDate           *time.Time
 }
 
 func (c *Client) Run(ctx context.Context, creatorID string) error {
@@ -43,6 +46,12 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 	}
 	slog.DebugContext(ctx, "Found pages", "pages", len(pagination.Pages))
 
+	if c.StartDate != nil || c.EndDate != nil {
+		slog.InfoContext(ctx, "Date filtering active",
+			"start_date", c.formatDateOrNil(c.StartDate),
+			"end_date", c.formatDateOrNil(c.EndDate))
+	}
+
 	for i, page := range pagination.Pages {
 		content := ListCreatorResponse{}
 		err := c.OfficialAPIClient.RequestAndUnwrapJSON(ctx, http.MethodGet, page, &content)
@@ -61,8 +70,27 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 			}
 			return fmt.Errorf("handle page: %w", err)
 		}
+
+		// Check if we can stop fetching more pages based on dates
+		if c.EndDate != nil && len(content.Body) > 0 {
+			// If the last post on this page is older than the start date,
+			// we don't need to check further pages
+			oldestPostTime, err := time.Parse(time.RFC3339, content.Body[len(content.Body)-1].PublishedDateTime)
+			if err == nil && oldestPostTime.Before(*c.EndDate) {
+				slog.InfoContext(ctx, "Reached posts older than end date, stopping pagination")
+				break
+			}
+		}
 	}
 	return nil
+}
+
+// formatDateOrNil returns a formatted date string or "nil" if the date is nil
+func (c *Client) formatDateOrNil(date *time.Time) string {
+	if date == nil {
+		return "nil"
+	}
+	return date.Format("2006-01-02")
 }
 
 func (c *Client) handlePage(ctx context.Context, content *ListCreatorResponse) error {
@@ -80,6 +108,12 @@ func (c *Client) handlePage(ctx context.Context, content *ListCreatorResponse) e
 
 func (c *Client) handlePost(ctx context.Context, item Post) error {
 	ctx = ctxval.AddSlogAttrs(ctx, slog.String("title", item.Title), slog.String("published_at", item.PublishedDateTime))
+
+	// Skip if the post is outside the date range
+	if !c.isWithinDateRange(item.PublishedDateTime) {
+		slog.DebugContext(ctx, "Skipping post outside date range")
+		return nil
+	}
 
 	if item.IsRestricted {
 		slog.DebugContext(ctx, "Skipping restricted post")
@@ -99,6 +133,11 @@ func (c *Client) handlePost(ctx context.Context, item Post) error {
 		return fmt.Errorf("get post: %w", err)
 	}
 	post := postResp.Body
+
+	// Handle text content
+	if err := c.handlePostText(ctx, post); err != nil {
+		return fmt.Errorf("handle post text: %w", err)
+	}
 
 	// for backward-compatibility, split downloadable file's order into two types
 	var (
@@ -136,6 +175,76 @@ func (c *Client) handlePost(ctx context.Context, item Post) error {
 	}
 
 	return nil
+}
+
+// handlePostText handles saving text content of a post.
+func (c *Client) handlePostText(ctx context.Context, post Post) error {
+	if c.SkipTexts {
+		slog.DebugContext(ctx, "Skip saving text content")
+		return nil
+	}
+
+	textContent := post.GetTextContent()
+	if textContent == "" {
+		slog.DebugContext(ctx, "No text content to save")
+		return nil
+	}
+
+	isDownloaded, err := c.Storage.TextExists(post)
+	if err != nil {
+		if c.SkipOnError {
+			slog.ErrorContext(ctx, "Skip saving text due to error", "error", err)
+			return nil
+		}
+		return fmt.Errorf("check whether text already saved: %w", err)
+	}
+
+	if isDownloaded {
+		slog.DebugContext(ctx, "Text content already saved")
+		return nil
+	}
+
+	if c.DryRun {
+		slog.InfoContext(ctx, "Skip saving text content due to dry-run mode")
+		return nil
+	}
+
+	slog.InfoContext(ctx, "Saving text content")
+	if err := c.Storage.SaveText(post); err != nil {
+		if c.SkipOnError {
+			slog.ErrorContext(ctx, "Skip saving text due to error", "error", err)
+			return nil
+		}
+		return fmt.Errorf("save text content: %w", err)
+	}
+
+	return nil
+}
+
+// isWithinDateRange checks if the post's published date is within the specified date range
+func (c *Client) isWithinDateRange(publishedDateTimeStr string) bool {
+	// If no date filters are set, include all posts
+	if c.StartDate == nil && c.EndDate == nil {
+		return true
+	}
+
+	publishedTime, err := time.Parse(time.RFC3339, publishedDateTimeStr)
+	if err != nil {
+		// If we can't parse the date, include the post by default
+		return true
+	}
+
+	// Check if post is after start date (if specified)
+	if c.StartDate != nil && publishedTime.Before(*c.StartDate) {
+		return false
+	}
+
+	// Check if post is before end date (if specified)
+	if c.EndDate != nil && publishedTime.After(*c.EndDate) {
+		return false
+	}
+
+	return true
 }
 
 var errAlreadyDownloaded = errors.New("already downloaded")

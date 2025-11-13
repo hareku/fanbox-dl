@@ -111,6 +111,11 @@ var skipImages = &cli.BoolFlag{
 	Value: false,
 	Usage: "Whether to skip downloading images.",
 }
+var skipTexts = &cli.BoolFlag{
+    Name:  "skip-texts",
+    Value: false,
+    Usage: "Whether to skip downloading post contents as text files.",
+}
 var dryRunFlag = &cli.BoolFlag{
 	Name:  "dry-run",
 	Value: false,
@@ -132,6 +137,18 @@ var removeUnprintableCharsFlag = &cli.BoolFlag{
 	Usage: "Whether to remove unprintable characters from file names.",
 }
 
+var startDateFlag = &cli.StringFlag{
+	Name:  "start-date",
+	Usage: "Only download posts published after this date (format: YYYY-MM-DD).",
+	Value: "",
+}
+
+var endDateFlag = &cli.StringFlag{
+	Name:  "end-date",
+	Usage: "Only download posts published before this date (format: YYYY-MM-DD).",
+	Value: "",
+}
+
 var app = &cli.App{
 	Name:  "fanbox-dl",
 	Usage: "This CLI downloads images of supporting and following creators.",
@@ -150,10 +167,13 @@ var app = &cli.App{
 		followingFlag,
 		skipFiles,
 		skipImages,
+		skipTexts,
 		dryRunFlag,
 		verboseFlag,
 		skipOnErrorFlag,
 		removeUnprintableCharsFlag,
+		startDateFlag,
+		endDateFlag,
 	},
 	Action: func(c *cli.Context) error {
 		applog.InitLogger(c.Bool(verboseFlag.Name))
@@ -173,6 +193,26 @@ var app = &cli.App{
 			}
 			slog.Debug("Using cookie", "cookie_bytes", len(v))
 			cookieStr = v
+		}
+
+		// Parse date ranges if provided
+		var startDate, endDate *time.Time
+		if startDateStr := c.String(startDateFlag.Name); startDateStr != "" {
+			parsedTime, err := time.Parse("2006-01-02", startDateStr)
+			if err != nil {
+				return fmt.Errorf("invalid start date format (use YYYY-MM-DD): %w", err)
+			}
+			startDate = &parsedTime
+		}
+
+		if endDateStr := c.String(endDateFlag.Name); endDateStr != "" {
+			parsedTime, err := time.Parse("2006-01-02", endDateStr)
+			if err != nil {
+				return fmt.Errorf("invalid end date format (use YYYY-MM-DD): %w", err)
+			}
+			// Set end date to the end of the specified day
+			parsedTime = parsedTime.Add(24*time.Hour - time.Second)
+			endDate = &parsedTime
 		}
 
 		httpClient := retryablehttp.NewClient()
@@ -205,8 +245,11 @@ var app = &cli.App{
 			DryRun:            c.Bool(dryRunFlag.Name),
 			SkipFiles:         c.Bool(skipFiles.Name),
 			SkipImages:        c.Bool(skipImages.Name),
+			SkipTexts:         c.Bool(skipTexts.Name),
 			SkipOnError:       c.Bool(skipOnErrorFlag.Name),
 			OfficialAPIClient: api,
+			StartDate:         startDate,
+			EndDate:           endDate,
 			Storage: &fanbox.LocalStorage{
 				SaveDir:   c.String(saveDirFlag.Name),
 				DirByPost: c.Bool(dirByPostFlag.Name),

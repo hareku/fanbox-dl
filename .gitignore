@@ -21,3 +21,5 @@ images/
 *.log
 
 dist/
+
+.vscode
