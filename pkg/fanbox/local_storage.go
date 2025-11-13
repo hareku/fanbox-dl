@@ -37,13 +37,15 @@ func (s *LocalStorage) Save(post Post, order int, d Downloadable, r io.Reader) e
 	if err != nil {
 		return fmt.Errorf("open a file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	_, err = io.Copy(file, r)
 	if err != nil {
 		// Remove the crashed file
 		fileName := file.Name()
-		file.Close()
+		_ = file.Close()
 
 		if removeRrr := os.Remove(fileName); removeRrr != nil {
 			return fmt.Errorf("file copying error and couldn't remove a crashed file (%s): %w", file.Name(), removeRrr)

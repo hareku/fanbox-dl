@@ -2,7 +2,6 @@ package fanbox
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -31,6 +30,7 @@ func (c *OfficialAPIClient) Request(ctx context.Context, method string, url stri
 	req = req.WithContext(ctx)
 	req.Header.Set("Cookie", c.Cookie)
 	req.Header.Set("Origin", "https://www.fanbox.cc") // If Origin header is not set, FANBOX returns HTTP 400 error.
+	req.Header.Set("Referer", "https://www.fanbox.cc/")
 	req.Header.Set("User-Agent", c.UserAgent)
 	req.Header.Set("Accept", "application/json, text/plain, */*")
 	req.Header.Set("Accept-Encoding", "gzip")
@@ -57,22 +57,7 @@ func (c *OfficialAPIClient) RequestAndUnwrapJSON(ctx context.Context, method str
 		return fmt.Errorf("status is %s", resp.Status)
 	}
 
-	var r io.Reader
-	switch resp.Header.Get("Content-Encoding") {
-	case "gzip":
-		slog.Debug("Response is gzip encoded")
-		gr, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return fmt.Errorf("gzip reader error: %w", err)
-		}
-		r = gr
-		defer gr.Close()
-	default:
-		slog.Debug("Response is unexpected encoding", "encoding", resp.Header.Get("Content-Encoding"))
-		r = resp.Body
-	}
-
-	if err = json.NewDecoder(r).Decode(v); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(v); err != nil {
 		if dump, dumpErr := httputil.DumpResponse(resp, false); dumpErr == nil {
 			slog.Debug("Response dump", "dump", string(dump))
 		}
@@ -101,7 +86,7 @@ func IsFailedToThumbnailingErr(resp *http.Response) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("read response body: %w", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	resp.Body = io.NopCloser(bytes.NewReader(b))
 
 	if string(b) == "failed to thumbnailing" {

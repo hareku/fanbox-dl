@@ -11,7 +11,10 @@ import (
 	"strings"
 	"time"
 
+	tls_client "github.com/bogdanfinn/tls-client"
+	"github.com/bogdanfinn/tls-client/profiles"
 	"github.com/hareku/fanbox-dl/internal/applog"
+	"github.com/hareku/fanbox-dl/internal/tlsclient"
 	"github.com/hareku/fanbox-dl/pkg/fanbox"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/urfave/cli/v2"
@@ -60,13 +63,13 @@ var sessIDFlag = &cli.StringFlag{
 }
 var cookieFlag = &cli.StringFlag{
 	Name:     "cookie",
-	Usage:    "Cookie for Fanbox API. This value overrides FANBOXSESSID environment value.",
+	Usage:    "Cookie for Fanbox API. This value overrides FANBOXSESSID.",
 	Required: false,
 }
 var userAgentFlag = &cli.StringFlag{
 	Name:  "user-agent",
 	Usage: "User-Agent for Fanbox API.",
-	Value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+	Value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
 }
 var saveDirFlag = &cli.StringFlag{
 	Name:  "save-dir",
@@ -181,9 +184,14 @@ var app = &cli.App{
 
 		var cookieStr string
 		if sessID := resolveSessionID(c); sessID != "" {
+			slog.Debug("Using session ID", "sessid_bytes", len(sessID))
 			cookieStr = fmt.Sprintf("FANBOXSESSID=%s", sessID)
 		}
 		if v := c.String(cookieFlag.Name); v != "" {
+			if cookieStr != "" {
+				slog.Warn("session ID and cookie are set, cookie option overrides session ID option")
+			}
+			slog.Debug("Using cookie", "cookie_bytes", len(v))
 			cookieStr = v
 		}
 
@@ -219,6 +227,12 @@ var app = &cli.App{
 			}
 			return retryablehttp.DefaultRetryPolicy(ctx, resp, nil)
 		}
+
+		tlsTransp, err := tlsclient.NewTransportWithOptions(tls_client.NewNoopLogger(), tls_client.WithClientProfile(profiles.Chrome_131))
+		if err != nil {
+			return fmt.Errorf("create tls transport: %w", err)
+		}
+		httpClient.HTTPClient.Transport = tlsTransp
 
 		api := &fanbox.OfficialAPIClient{
 			HTTPClient: httpClient,
