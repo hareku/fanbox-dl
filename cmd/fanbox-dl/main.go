@@ -132,6 +132,34 @@ var removeUnprintableCharsFlag = &cli.BoolFlag{
 	Usage: "Whether to remove unprintable characters from file names.",
 }
 
+type DatePredicateValue struct {
+	Predicate *DatePredicate
+}
+
+func (v *DatePredicateValue) Set(value string) error {
+	p, err := ParseDatePredicate(value)
+	if err != nil {
+		return fmt.Errorf("invalid date-range %q: %w", value, err)
+	}
+	v.Predicate = p
+	return nil
+}
+
+func (v *DatePredicateValue) String() string {
+	if v == nil || v.Predicate == nil {
+		return ""
+	}
+	return "<date-predicate>"
+}
+
+var dateFlag = &cli.GenericFlag{
+	Name:  "date-range",
+	Usage: "Filter by date (e.g. 2024-01-01<x<=2024-12-31)",
+	Value: &DatePredicateValue{
+		Predicate: nil,
+	},
+}
+
 var app = &cli.App{
 	Name:  "fanbox-dl",
 	Usage: "This CLI downloads images of supporting and following creators.",
@@ -140,6 +168,7 @@ var app = &cli.App{
 		creatorFlag,
 		ignoreCreatorFlag,
 		sessIDFlag,
+		dateFlag,
 		cookieFlag,
 		saveDirFlag,
 		dirByPostFlag,
@@ -200,12 +229,22 @@ var app = &cli.App{
 			UserAgent:  c.String(userAgentFlag.Name),
 		}
 
+		v := c.Generic("date-range")
+		var dp *DatePredicate
+
+		if v != nil {
+			if dpv, ok := v.(*DatePredicateValue); ok {
+				dp = dpv.Predicate
+			}
+		}
+
 		client := &fanbox.Client{
 			CheckAllPosts:     c.Bool(allFlag.Name),
 			DryRun:            c.Bool(dryRunFlag.Name),
 			SkipFiles:         c.Bool(skipFiles.Name),
 			SkipImages:        c.Bool(skipImages.Name),
 			SkipOnError:       c.Bool(skipOnErrorFlag.Name),
+			DateFilter:        dp,
 			OfficialAPIClient: api,
 			Storage: &fanbox.LocalStorage{
 				SaveDir:   c.String(saveDirFlag.Name),
