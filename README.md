@@ -34,6 +34,7 @@ The latest binary can be downloaded [here](https://github.com/hareku/fanbox-dl/r
 | dir-by-plan | Separates content saved into directories based on the plan the post belonged to. | `--dir-by-plan` | `false` |
 | dir-by-post | Separates content saved into directories based on the title of the post. <br>Stored inside the plan directory when accompanied by the `dir-by-plan` flag. | `--dir-by-post` | `false` |
 | all | Will ensure that all content is downloaded from creators. <br>Will also redownload content that might already be present locally. | `--all` | `false` |
+|date-range| Will limit what do download by date with patterns like `>=2025-12-01` or `2025-12-01` or `2025-12-01<x<=2025-12-02` | `--date-range` | `nil` |
 | skip-files | Will skip downloading non-image files from creators. | `--skip-files` | `false` |
 | skip-images | Will skip downloading images from creators. This is useful when you only want to download files. | `--skip-images` | `false` |
 | skip-on-error | Will skip downloading instead of exiting when an error occurs. | `--skip-on-error` | `false` |

@@ -133,11 +133,11 @@ var removeUnprintableCharsFlag = &cli.BoolFlag{
 }
 
 type DatePredicateValue struct {
-	Predicate *DatePredicate
+	Predicate *fanbox.DatePredicate
 }
 
 func (v *DatePredicateValue) Set(value string) error {
-	p, err := ParseDatePredicate(value)
+	p, err := fanbox.ParseDatePredicate(value)
 	if err != nil {
 		return fmt.Errorf("invalid date-range %q: %w", value, err)
 	}
@@ -230,7 +230,7 @@ var app = &cli.App{
 		}
 
 		v := c.Generic("date-range")
-		var dp *DatePredicate
+		var dp *fanbox.DatePredicate
 
 		if v != nil {
 			if dpv, ok := v.(*DatePredicateValue); ok {
