@@ -11,17 +11,32 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"reflect"
+	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
+	"go.uber.org/ratelimit"
 )
 
 type OfficialAPIClient struct {
 	HTTPClient *retryablehttp.Client
 	Cookie     string
 	UserAgent  string
+
+	limiter ratelimit.Limiter
+}
+
+func NewOfficialAPIClient(httpClient *retryablehttp.Client, cookie string, userAgent string, maxRequestsPerMinute int) *OfficialAPIClient {
+	return &OfficialAPIClient{
+		HTTPClient: httpClient,
+		Cookie:     cookie,
+		UserAgent:  userAgent,
+		limiter:    ratelimit.New(maxRequestsPerMinute, ratelimit.Per(time.Minute)),
+	}
 }
 
 func (c *OfficialAPIClient) Request(ctx context.Context, method string, url string) (*http.Response, error) {
+	c.limiter.Take()
+
 	req, err := retryablehttp.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("http request building error: %w", err)

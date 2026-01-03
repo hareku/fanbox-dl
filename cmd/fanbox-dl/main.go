@@ -131,6 +131,11 @@ var removeUnprintableCharsFlag = &cli.BoolFlag{
 	Value: false,
 	Usage: "Whether to remove unprintable characters from file names.",
 }
+var maxRequestsPerMinuteFlag = &cli.IntFlag{
+	Name:  "max-rpm",
+	Value: 40,
+	Usage: "Maximum number of requests per minute to Fanbox API.",
+}
 
 var app = &cli.App{
 	Name:  "fanbox-dl",
@@ -154,6 +159,7 @@ var app = &cli.App{
 		verboseFlag,
 		skipOnErrorFlag,
 		removeUnprintableCharsFlag,
+		maxRequestsPerMinuteFlag,
 	},
 	Action: func(c *cli.Context) error {
 		applog.InitLogger(c.Bool(verboseFlag.Name))
@@ -194,11 +200,7 @@ var app = &cli.App{
 		}
 		httpClient.HTTPClient.Transport = tlsTransp
 
-		api := &fanbox.OfficialAPIClient{
-			HTTPClient: httpClient,
-			Cookie:     cookieStr,
-			UserAgent:  c.String(userAgentFlag.Name),
-		}
+		api := fanbox.NewOfficialAPIClient(httpClient, cookieStr, c.String(userAgentFlag.Name), c.Int(maxRequestsPerMinuteFlag.Name))
 
 		client := &fanbox.Client{
 			CheckAllPosts:     c.Bool(allFlag.Name),

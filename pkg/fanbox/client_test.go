@@ -133,13 +133,11 @@ func TestClient_Run(t *testing.T) {
 			})
 
 			client := fanbox.Client{
-				CheckAllPosts: true,
-				DryRun:        tt.config.dryRun,
-				SkipFiles:     tt.config.skipFiles,
-				SkipImages:    tt.config.skipImages,
-				OfficialAPIClient: &fanbox.OfficialAPIClient{
-					HTTPClient: httpClient,
-				},
+				CheckAllPosts:     true,
+				DryRun:            tt.config.dryRun,
+				SkipFiles:         tt.config.skipFiles,
+				SkipImages:        tt.config.skipImages,
+				OfficialAPIClient: fanbox.NewOfficialAPIClient(httpClient, "", "", 1000),
 				Storage: &fanbox.LocalStorage{
 					SaveDir:   saveDir,
 					DirByPost: tt.config.dirByPost,
