@@ -13,15 +13,24 @@ import (
 	"reflect"
 
 	"github.com/hashicorp/go-retryablehttp"
+	"golang.org/x/time/rate"
 )
 
 type OfficialAPIClient struct {
-	HTTPClient *retryablehttp.Client
-	Cookie     string
-	UserAgent  string
+	HTTPClient  *retryablehttp.Client
+	Cookie      string
+	UserAgent   string
+	RateLimiter *rate.Limiter
 }
 
 func (c *OfficialAPIClient) Request(ctx context.Context, method string, url string) (*http.Response, error) {
+	// Apply rate limiting if configured
+	if c.RateLimiter != nil {
+		if err := c.RateLimiter.Wait(ctx); err != nil {
+			return nil, fmt.Errorf("rate limiter wait error: %w", err)
+		}
+	}
+
 	req, err := retryablehttp.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("http request building error: %w", err)

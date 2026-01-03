@@ -18,6 +18,7 @@ import (
 	"github.com/hareku/fanbox-dl/pkg/fanbox"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/time/rate"
 )
 
 func resolveSessionID(c *cli.Context) string {
@@ -131,6 +132,11 @@ var removeUnprintableCharsFlag = &cli.BoolFlag{
 	Value: false,
 	Usage: "Whether to remove unprintable characters from file names.",
 }
+var rateLimitFlag = &cli.Float64Flag{
+	Name:  "rate-limit",
+	Value: 0,
+	Usage: "Maximum number of requests per second (0 = unlimited). Example: --rate-limit 2 limits to 2 requests/second.",
+}
 
 var app = &cli.App{
 	Name:  "fanbox-dl",
@@ -154,6 +160,7 @@ var app = &cli.App{
 		verboseFlag,
 		skipOnErrorFlag,
 		removeUnprintableCharsFlag,
+		rateLimitFlag,
 	},
 	Action: func(c *cli.Context) error {
 		applog.InitLogger(c.Bool(verboseFlag.Name))
@@ -194,10 +201,18 @@ var app = &cli.App{
 		}
 		httpClient.HTTPClient.Transport = tlsTransp
 
+		// Setup rate limiter if specified
+		var rateLimiter *rate.Limiter
+		if rateLimit := c.Float64(rateLimitFlag.Name); rateLimit > 0 {
+			slog.Info("Rate limiting enabled", "requests_per_second", rateLimit)
+			rateLimiter = rate.NewLimiter(rate.Limit(rateLimit), 1)
+		}
+
 		api := &fanbox.OfficialAPIClient{
-			HTTPClient: httpClient,
-			Cookie:     cookieStr,
-			UserAgent:  c.String(userAgentFlag.Name),
+			HTTPClient:  httpClient,
+			Cookie:      cookieStr,
+			UserAgent:   c.String(userAgentFlag.Name),
+			RateLimiter: rateLimiter,
 		}
 
 		client := &fanbox.Client{
