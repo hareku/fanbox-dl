@@ -138,6 +138,14 @@ type PlanListSupportingResponse struct {
 	Body []Plan `json:"body"`
 }
 
+type PlanListFollowingResponse struct {
+	Body PlanListCreators `json:"body"`
+}
+
+type PlanListCreators struct {
+	Creators []Plan `json:"creators"`
+}
+
 type Plan struct {
 	CreatorID string `json:"creatorId"`
 }
