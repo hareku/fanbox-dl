@@ -1,10 +1,13 @@
-.PHONY: build release
+.PHONY: build build-win release
 
 test:
 	go test ./...
 
 build:
 	goreleaser build --single-target --skip=validate --clean
+
+build-win:
+	GOOS=windows GOARCH=amd64 GOAMD64=v1 goreleaser build --single-target --skip=validate --clean
 
 # make tag TAG=vx.x.x
 tag:
