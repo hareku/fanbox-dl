@@ -58,12 +58,12 @@ func (c *CreatorIDLister) all(ctx context.Context, in *CreatorIDListerDoInput) (
 	}
 
 	if in.IncludeFollowing {
-		following := PlanListSupportingResponse{}
+		following := PlanListFollowingResponse{}
 		err := c.OfficialAPIClient.RequestAndUnwrapJSON(ctx, http.MethodGet, "https://api.fanbox.cc/creator.listFollowing", &following)
 		if err != nil {
 			return nil, fmt.Errorf("list following creators: %w", err)
 		}
-		for _, f := range following.Body {
+		for _, f := range following.Body.Creators {
 			ids[f.CreatorID] = nil
 		}
 	}
