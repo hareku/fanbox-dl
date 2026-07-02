@@ -12,7 +12,6 @@ import (
 	"time"
 
 	tls_client "github.com/bogdanfinn/tls-client"
-	"github.com/bogdanfinn/tls-client/profiles"
 	"github.com/hareku/fanbox-dl/internal/applog"
 	"github.com/hareku/fanbox-dl/internal/tlsclient"
 	"github.com/hareku/fanbox-dl/pkg/fanbox"
@@ -28,11 +27,31 @@ func resolveSessionID(c *cli.Context) string {
 	if v := os.Getenv("FANBOXSESSID"); v != "" {
 		return v
 	}
-	if v := os.Getenv("FANBOX_COOKIE"); v != "" {
-		return v
-	}
 
 	return ""
+}
+
+func resolveCookie(c *cli.Context) string {
+	var cookieStr string
+	if sessID := resolveSessionID(c); sessID != "" {
+		slog.Debug("Using session ID", "sessid_bytes", len(sessID))
+		cookieStr = fmt.Sprintf("FANBOXSESSID=%s", sessID)
+	}
+	if envCookie := os.Getenv("FANBOX_COOKIE"); envCookie != "" {
+		if cookieStr != "" {
+			slog.Warn("session ID and FANBOX_COOKIE are set, FANBOX_COOKIE overrides session ID")
+		}
+		slog.Debug("Using cookie from FANBOX_COOKIE", "cookie_bytes", len(envCookie))
+		cookieStr = envCookie
+	}
+	if v := c.String(cookieFlag.Name); v != "" {
+		if cookieStr != "" {
+			slog.Warn("cookie option is set, cookie option overrides other cookie settings")
+		}
+		slog.Debug("Using cookie", "cookie_bytes", len(v))
+		cookieStr = v
+	}
+	return cookieStr
 }
 
 var (
@@ -70,6 +89,11 @@ var userAgentFlag = &cli.StringFlag{
 	Name:  "user-agent",
 	Usage: "User-Agent for Fanbox API.",
 	Value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+}
+var browserProfileFlag = &cli.StringFlag{
+	Name:  "browser-profile",
+	Usage: "Browser profile to simulate: auto, chrome, or firefox.",
+	Value: fanbox.BrowserProfileAuto,
 }
 var saveDirFlag = &cli.StringFlag{
 	Name:  "save-dir",
@@ -112,9 +136,9 @@ var skipImages = &cli.BoolFlag{
 	Usage: "Whether to skip downloading images.",
 }
 var skipTexts = &cli.BoolFlag{
-    Name:  "skip-texts",
-    Value: false,
-    Usage: "Whether to skip downloading post contents as text files.",
+	Name:  "skip-texts",
+	Value: false,
+	Usage: "Whether to skip downloading post contents as text files.",
 }
 var dryRunFlag = &cli.BoolFlag{
 	Name:  "dry-run",
@@ -158,6 +182,7 @@ var app = &cli.App{
 		ignoreCreatorFlag,
 		sessIDFlag,
 		cookieFlag,
+		browserProfileFlag,
 		saveDirFlag,
 		dirByPostFlag,
 		dirByPlanFlag,
@@ -182,18 +207,17 @@ var app = &cli.App{
 			return nil
 		}
 
-		var cookieStr string
-		if sessID := resolveSessionID(c); sessID != "" {
-			slog.Debug("Using session ID", "sessid_bytes", len(sessID))
-			cookieStr = fmt.Sprintf("FANBOXSESSID=%s", sessID)
+		cookieStr := resolveCookie(c)
+		userAgent := c.String(userAgentFlag.Name)
+		browserProfile, err := fanbox.ResolveBrowserProfile(userAgent, c.String(browserProfileFlag.Name))
+		if err != nil {
+			return err
 		}
-		if v := c.String(cookieFlag.Name); v != "" {
-			if cookieStr != "" {
-				slog.Warn("session ID and cookie are set, cookie option overrides session ID option")
-			}
-			slog.Debug("Using cookie", "cookie_bytes", len(v))
-			cookieStr = v
-		}
+		slog.Debug("Resolved browser profile",
+			"family", browserProfile.Family,
+			"tls_profile", browserProfile.TLSProfileName,
+			"requested_major", browserProfile.RequestedBrowserMajor(),
+		)
 
 		// Parse date ranges if provided
 		var startDate, endDate *time.Time
@@ -228,16 +252,17 @@ var app = &cli.App{
 			return retryablehttp.DefaultRetryPolicy(ctx, resp, nil)
 		}
 
-		tlsTransp, err := tlsclient.NewTransportWithOptions(tls_client.NewNoopLogger(), tls_client.WithClientProfile(profiles.Chrome_131))
+		tlsTransp, err := tlsclient.NewTransportWithOptions(tls_client.NewNoopLogger(), tls_client.WithClientProfile(browserProfile.TLSProfile))
 		if err != nil {
 			return fmt.Errorf("create tls transport: %w", err)
 		}
 		httpClient.HTTPClient.Transport = tlsTransp
 
 		api := &fanbox.OfficialAPIClient{
-			HTTPClient: httpClient,
-			Cookie:     cookieStr,
-			UserAgent:  c.String(userAgentFlag.Name),
+			HTTPClient:     httpClient,
+			Cookie:         cookieStr,
+			UserAgent:      userAgent,
+			BrowserProfile: browserProfile,
 		}
 
 		client := &fanbox.Client{

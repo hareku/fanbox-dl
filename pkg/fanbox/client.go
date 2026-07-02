@@ -336,7 +336,7 @@ var ErrStatusForbidden = errors.New("status code 403")
 func (c *Client) download(ctx context.Context, post Post, order int, d Downloadable) error {
 	var resp *http.Response
 
-	resp, err := c.OfficialAPIClient.Request(ctx, http.MethodGet, d.GetURL())
+	resp, err := c.OfficialAPIClient.RequestAsset(ctx, http.MethodGet, d.GetURL())
 	if err != nil {
 		if errors.Is(err, ErrFailedToThumbnailing) {
 			slog.InfoContext(ctx, "The original file is not available (maybe it's a too large), so download a thumbnail instead", "original_file", d.GetURL())
@@ -346,7 +346,7 @@ func (c *Client) download(ctx context.Context, post Post, order int, d Downloada
 			}
 			slog.InfoContext(ctx, "Downloading a thumbnail", "thumbnail_url", tu)
 
-			resp, err = c.OfficialAPIClient.Request(ctx, http.MethodGet, tu)
+			resp, err = c.OfficialAPIClient.RequestAsset(ctx, http.MethodGet, tu)
 			if err != nil {
 				return fmt.Errorf("request error (%s): %w", tu, err)
 			}
