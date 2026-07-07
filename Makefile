@@ -1,7 +1,10 @@
-.PHONY: build build-win release
+.PHONY: test test-integration build build-win release
 
 test:
 	go test ./...
+
+test-integration:
+	go test -tags=integration ./...
 
 build:
 	goreleaser build --single-target --skip=validate --clean
