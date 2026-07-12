@@ -176,6 +176,7 @@ var app = &cli.App{
 		}
 
 		httpClient := retryablehttp.NewClient()
+		httpClient.HTTPClient.Jar = fanbox.NewCookieJar()
 		httpClient.Logger = applog.NewRetryableLeveledLogger(slog.Default())
 		httpClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
 			if err != nil {

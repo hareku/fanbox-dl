@@ -126,6 +126,7 @@ func TestClient_Run(t *testing.T) {
 	}
 
 	httpClient := retryablehttp.NewClient()
+	httpClient.HTTPClient.Jar = fanbox.NewCookieJar()
 	tlsTransp, err := tlsclient.NewTransportWithOptions(tls_client.NewNoopLogger(), tls_client.WithClientProfile(profiles.Chrome_146_PSK))
 	require.NoError(t, err)
 	httpClient.HTTPClient.Transport = tlsTransp
