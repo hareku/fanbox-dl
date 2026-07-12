@@ -69,7 +69,7 @@ var cookieFlag = &cli.StringFlag{
 var userAgentFlag = &cli.StringFlag{
 	Name:  "user-agent",
 	Usage: "User-Agent for Fanbox API.",
-	Value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+	Value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
 }
 var saveDirFlag = &cli.StringFlag{
 	Name:  "save-dir",
@@ -188,7 +188,7 @@ var app = &cli.App{
 			return retryablehttp.DefaultRetryPolicy(ctx, resp, nil)
 		}
 
-		tlsTransp, err := tlsclient.NewTransportWithOptions(tls_client.NewNoopLogger(), tls_client.WithClientProfile(profiles.Chrome_131))
+		tlsTransp, err := tlsclient.NewTransportWithOptions(tls_client.NewNoopLogger(), tls_client.WithClientProfile(profiles.Chrome_146_PSK))
 		if err != nil {
 			return fmt.Errorf("create tls transport: %w", err)
 		}
