@@ -126,7 +126,8 @@ func TestClient_Run(t *testing.T) {
 	}
 
 	httpClient := retryablehttp.NewClient()
-	tlsTransp, err := tlsclient.NewTransportWithOptions(tls_client.NewNoopLogger(), tls_client.WithClientProfile(profiles.Chrome_131))
+	httpClient.HTTPClient.Jar = fanbox.NewCookieJar()
+	tlsTransp, err := tlsclient.NewTransportWithOptions(tls_client.NewNoopLogger(), tls_client.WithClientProfile(profiles.Chrome_146_PSK))
 	require.NoError(t, err)
 	httpClient.HTTPClient.Transport = tlsTransp
 
@@ -145,7 +146,7 @@ func TestClient_Run(t *testing.T) {
 				SkipImages:    tt.config.skipImages,
 				OfficialAPIClient: &fanbox.OfficialAPIClient{
 					HTTPClient: httpClient,
-					UserAgent:  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+					UserAgent:  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
 				},
 				Storage: &fanbox.LocalStorage{
 					SaveDir:   saveDir,
