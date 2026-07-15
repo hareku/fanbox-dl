@@ -9,6 +9,9 @@ import (
 	"sort"
 	"testing"
 
+	tls_client "github.com/bogdanfinn/tls-client"
+	"github.com/bogdanfinn/tls-client/profiles"
+	"github.com/hareku/fanbox-dl/internal/tlsclient"
 	"github.com/hareku/fanbox-dl/pkg/fanbox"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/stretchr/testify/assert"
@@ -123,6 +126,10 @@ func TestClient_Run(t *testing.T) {
 	}
 
 	httpClient := retryablehttp.NewClient()
+	httpClient.HTTPClient.Jar = fanbox.NewCookieJar()
+	tlsTransp, err := tlsclient.NewTransportWithOptions(tls_client.NewNoopLogger(), tls_client.WithClientProfile(profiles.Chrome_146_PSK))
+	require.NoError(t, err)
+	httpClient.HTTPClient.Transport = tlsTransp
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d_config:%+v", i, tt.config), func(t *testing.T) {
@@ -139,6 +146,7 @@ func TestClient_Run(t *testing.T) {
 				SkipImages:    tt.config.skipImages,
 				OfficialAPIClient: &fanbox.OfficialAPIClient{
 					HTTPClient: httpClient,
+					UserAgent:  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
 				},
 				Storage: &fanbox.LocalStorage{
 					SaveDir:   saveDir,
