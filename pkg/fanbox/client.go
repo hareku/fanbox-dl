@@ -100,6 +100,12 @@ func (c *Client) handlePost(ctx context.Context, item Post) error {
 	}
 	post := postResp.Body
 
+	// post.info may return a restricted or empty body for posts we can't access
+	if post.IsRestricted || post.Body == nil {
+		slog.DebugContext(ctx, "Skipping restricted or empty post")
+		return nil
+	}
+
 	// for backward-compatibility, split downloadable file's order into two types
 	var (
 		nextImgOrder  int
