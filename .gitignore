@@ -23,3 +23,7 @@ images/
 dist/
 
 .envrc
+
+# Nix build output
+result
+result-*
