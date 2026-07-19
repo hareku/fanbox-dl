@@ -88,7 +88,7 @@ var cookieFlag = &cli.StringFlag{
 var userAgentFlag = &cli.StringFlag{
 	Name:  "user-agent",
 	Usage: "User-Agent for Fanbox API.",
-	Value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+	Value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
 }
 var browserProfileFlag = &cli.StringFlag{
 	Name:  "browser-profile",
@@ -240,6 +240,7 @@ var app = &cli.App{
 		}
 
 		httpClient := retryablehttp.NewClient()
+		httpClient.HTTPClient.Jar = fanbox.NewCookieJar()
 		httpClient.Logger = applog.NewRetryableLeveledLogger(slog.Default())
 		httpClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
 			if err != nil {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -82,6 +83,19 @@ func (c *OfficialAPIClient) RequestAndUnwrapJSON(ctx context.Context, method str
 }
 
 var ErrFailedToThumbnailing = fmt.Errorf("failed to thumbnailing")
+
+var ErrInvalidSession = errors.New("invalid session")
+
+func (c *OfficialAPIClient) ValidateSession(ctx context.Context) error {
+	var resp PlanListSupportingResponse
+	if err := c.RequestAndUnwrapJSON(ctx, http.MethodGet, "https://api.fanbox.cc/plan.listSupporting", &resp); err != nil {
+		return fmt.Errorf("%w: %w", ErrInvalidSession, err)
+	}
+	if len(resp.Body) == 0 {
+		return ErrInvalidSession
+	}
+	return nil
+}
 
 // fanbox returns HTTP 500 error and response body is "failed to thumbnailing"
 // when the image is not available (e.g. too large).

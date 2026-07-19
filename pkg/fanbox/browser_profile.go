@@ -78,8 +78,8 @@ func (p *BrowserProfile) RequestedBrowserMajor() int {
 func newChromeProfile(userAgent string) *BrowserProfile {
 	return &BrowserProfile{
 		Family:                BrowserFamilyChrome,
-		TLSProfile:            profiles.Chrome_133,
-		TLSProfileName:        "chrome_133",
+		TLSProfile:            profiles.Chrome_146_PSK,
+		TLSProfileName:        "chrome_146_psk",
 		HeaderOrder:           chromeAPIHeaderOrder,
 		AssetHeaderOrder:      chromeAssetHeaderOrder,
 		PseudoHeaderOrder:     []string{":method", ":authority", ":scheme", ":path"},
@@ -183,7 +183,7 @@ func setCookieHeader(h http.Header, cookie string) {
 func chromeSecCHUA(userAgent string) string {
 	version := parseBrowserMajor(userAgent)
 	if version == 0 {
-		version = 133
+		version = 146
 	}
 	major := fmt.Sprintf("%d", version)
 	return fmt.Sprintf(`"Not(A:Brand";v="99", "Google Chrome";v="%s", "Chromium";v="%s"`, major, major)

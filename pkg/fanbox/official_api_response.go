@@ -179,6 +179,10 @@ func (i Image) GetName() string {
 }
 
 func (f *Post) ListDownloadable() []Downloadable {
+	if f.Body == nil {
+		return nil
+	}
+
 	if f.Body.Images != nil {
 		res := make([]Downloadable, 0, len(*f.Body.Images))
 		for _, v := range *f.Body.Images {
