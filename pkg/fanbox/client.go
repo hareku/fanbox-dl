@@ -24,6 +24,7 @@ type Client struct {
 	SkipTexts         bool
 	SkipOnError       bool
 	OfficialAPIClient *OfficialAPIClient
+	ProgressWriter    io.Writer
 	Storage           *LocalStorage
 	StartDate         *time.Time
 	EndDate           *time.Time
@@ -373,9 +374,13 @@ func (c *Client) download(ctx context.Context, post Post, order int, d Downloada
 		return fmt.Errorf("status code %d", resp.StatusCode)
 	}
 
-	if err := c.Storage.Save(post, order, d, resp.Body); err != nil {
+	progressBar := newDownloadProgressBar(c.ProgressWriter)
+	progress := newDownloadProgressReader(resp.Body, resp.ContentLength, progressBar.Update)
+	if err := c.Storage.Save(post, order, d, progress); err != nil {
+		progressBar.Clear()
 		return fmt.Errorf("save a file: %w", err)
 	}
+	progressBar.Finish()
 
 	return nil
 }

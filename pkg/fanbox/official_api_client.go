@@ -17,10 +17,11 @@ import (
 )
 
 type OfficialAPIClient struct {
-	HTTPClient     *retryablehttp.Client
-	Cookie         string
-	UserAgent      string
-	BrowserProfile *BrowserProfile
+	HTTPClient      *retryablehttp.Client
+	AssetHTTPClient *retryablehttp.Client
+	Cookie          string
+	UserAgent       string
+	BrowserProfile  *BrowserProfile
 }
 
 func (c *OfficialAPIClient) Request(ctx context.Context, method string, url string) (*http.Response, error) {
@@ -48,7 +49,11 @@ func (c *OfficialAPIClient) request(ctx context.Context, method string, url stri
 		profile.ApplyAPIHeaders(req.Header, c.Cookie, c.UserAgent)
 	}
 
-	return c.HTTPClient.Do(req)
+	httpClient := c.HTTPClient
+	if asset && c.AssetHTTPClient != nil {
+		httpClient = c.AssetHTTPClient
+	}
+	return httpClient.Do(req)
 }
 
 func (c *OfficialAPIClient) RequestAndUnwrapJSON(ctx context.Context, method string, url string, v interface{}) error {

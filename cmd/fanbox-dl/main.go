@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -239,10 +240,9 @@ var app = &cli.App{
 			endDate = &parsedTime
 		}
 
-		httpClient := retryablehttp.NewClient()
-		httpClient.HTTPClient.Jar = fanbox.NewCookieJar()
-		httpClient.Logger = applog.NewRetryableLeveledLogger(slog.Default())
-		httpClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		cookieJar := fanbox.NewCookieJar()
+		retryLogger := applog.NewRetryableLeveledLogger(slog.Default())
+		checkRetry := func(ctx context.Context, resp *http.Response, err error) (bool, error) {
 			if err != nil {
 				return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 			}
@@ -252,18 +252,47 @@ var app = &cli.App{
 			}
 			return retryablehttp.DefaultRetryPolicy(ctx, resp, nil)
 		}
+		newHTTPClient := func() *retryablehttp.Client {
+			client := retryablehttp.NewClient()
+			client.HTTPClient.Jar = cookieJar
+			client.Logger = retryLogger
+			client.CheckRetry = checkRetry
+			return client
+		}
 
-		tlsTransp, err := tlsclient.NewTransportWithOptions(tls_client.NewNoopLogger(), tls_client.WithClientProfile(browserProfile.TLSProfile))
+		httpClient := newHTTPClient()
+
+		tlsTransp, err := tlsclient.NewTransportWithOptions(
+			tls_client.NewNoopLogger(),
+			tls_client.WithClientProfile(browserProfile.TLSProfile),
+		)
 		if err != nil {
 			return fmt.Errorf("create tls transport: %w", err)
 		}
 		httpClient.HTTPClient.Transport = tlsTransp
 
+		assetHTTPClient := newHTTPClient()
+		assetTLSTransp, err := tlsclient.NewTransportWithOptions(
+			tls_client.NewNoopLogger(),
+			tls_client.WithClientProfile(browserProfile.TLSProfile),
+			tls_client.WithTimeoutSeconds(24*60*60),
+		)
+		if err != nil {
+			return fmt.Errorf("create asset TLS transport: %w", err)
+		}
+		assetHTTPClient.HTTPClient.Transport = assetTLSTransp
+
 		api := &fanbox.OfficialAPIClient{
-			HTTPClient:     httpClient,
-			Cookie:         cookieStr,
-			UserAgent:      userAgent,
-			BrowserProfile: browserProfile,
+			HTTPClient:      httpClient,
+			AssetHTTPClient: assetHTTPClient,
+			Cookie:          cookieStr,
+			UserAgent:       userAgent,
+			BrowserProfile:  browserProfile,
+		}
+
+		var progressWriter io.Writer
+		if stdoutInfo, err := os.Stdout.Stat(); err == nil && stdoutInfo.Mode()&os.ModeCharDevice != 0 {
+			progressWriter = os.Stdout
 		}
 
 		client := &fanbox.Client{
@@ -276,6 +305,7 @@ var app = &cli.App{
 			OfficialAPIClient: api,
 			StartDate:         startDate,
 			EndDate:           endDate,
+			ProgressWriter:    progressWriter,
 			Storage: &fanbox.LocalStorage{
 				SaveDir:   c.String(saveDirFlag.Name),
 				DirByPost: c.Bool(dirByPostFlag.Name),
