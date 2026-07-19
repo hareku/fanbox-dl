@@ -17,7 +17,9 @@ type ListCreatorResponse struct {
 
 // PostInfoResponse represents the response of https://api.fanbox.cc/post.info.
 type PostInfoResponse struct {
-	Body Post `json:"body"`
+	Body struct {
+		Post Post `json:"post"`
+	} `json:"body"`
 }
 
 // Post represents post attributes.

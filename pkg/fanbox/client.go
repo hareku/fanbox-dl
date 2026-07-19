@@ -132,7 +132,7 @@ func (c *Client) handlePost(ctx context.Context, item Post) error {
 	); err != nil {
 		return fmt.Errorf("get post: %w", err)
 	}
-	post := postResp.Body
+	post := postResp.Body.Post
 
 	// post.info may return a restricted or empty body for posts we can't access
 	if post.IsRestricted || post.Body == nil {
