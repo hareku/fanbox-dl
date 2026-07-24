@@ -1,8 +1,0 @@
-{
-  "body": {
-    "pageUrls": [
-      "https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10",
-      "https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10&page=2"
-    ]
-  }
-}

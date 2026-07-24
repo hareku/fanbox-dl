@@ -2,29 +2,34 @@ package fanbox
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	paginationLegacyResponse   = `{"body":["https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10","https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10&page=2"]}`
+	paginationCurrentResponse  = `{"body":{"pageUrls":["https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10","https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10&page=2"]}}`
+	listCreatorLegacyResponse  = `{"body":[{"id":"1001","title":"First post"},{"id":"1002","title":"Second post"}]}`
+	listCreatorCurrentResponse = `{"body":{"posts":[{"id":"1001","title":"First post"},{"id":"1002","title":"Second post"}]}}`
+	postInfoLegacyResponse     = `{"body":{"id":"1001","title":"Example post","creatorId":"example"}}`
+	postInfoCurrentResponse    = `{"body":{"post":{"id":"1001","title":"Example post","creatorId":"example"}}}`
+)
+
 func TestPagination_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
-		name    string
-		fixture string
+		name string
+		data string
 	}{
-		{name: "legacy response", fixture: "pagination_legacy.json"},
-		{name: "current response", fixture: "pagination_current.json"},
+		{name: "legacy response", data: paginationLegacyResponse},
+		{name: "current response", data: paginationCurrentResponse},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data := readResponseFixture(t, tt.fixture)
-
 			var response Pagination
-			require.NoError(t, json.Unmarshal(data, &response))
+			require.NoError(t, json.Unmarshal([]byte(tt.data), &response))
 			assert.Equal(t, []string{
 				"https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10",
 				"https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10&page=2",
@@ -35,19 +40,17 @@ func TestPagination_UnmarshalJSON(t *testing.T) {
 
 func TestListCreatorResponse_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
-		name    string
-		fixture string
+		name string
+		data string
 	}{
-		{name: "legacy response", fixture: "list_creator_legacy.json"},
-		{name: "current response", fixture: "list_creator_current.json"},
+		{name: "legacy response", data: listCreatorLegacyResponse},
+		{name: "current response", data: listCreatorCurrentResponse},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data := readResponseFixture(t, tt.fixture)
-
 			var response ListCreatorResponse
-			require.NoError(t, json.Unmarshal(data, &response))
+			require.NoError(t, json.Unmarshal([]byte(tt.data), &response))
 			require.Len(t, response.Body, 2)
 			assert.Equal(t, "1001", response.Body[0].ID)
 			assert.Equal(t, "First post", response.Body[0].Title)
@@ -59,19 +62,17 @@ func TestListCreatorResponse_UnmarshalJSON(t *testing.T) {
 
 func TestPostInfoResponse_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
-		name    string
-		fixture string
+		name string
+		data string
 	}{
-		{name: "legacy response", fixture: "post_info_legacy.json"},
-		{name: "current response", fixture: "post_info_current.json"},
+		{name: "legacy response", data: postInfoLegacyResponse},
+		{name: "current response", data: postInfoCurrentResponse},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data := readResponseFixture(t, tt.fixture)
-
 			var response PostInfoResponse
-			require.NoError(t, json.Unmarshal(data, &response))
+			require.NoError(t, json.Unmarshal([]byte(tt.data), &response))
 			assert.Equal(t, "1001", response.Body.ID)
 			assert.Equal(t, "Example post", response.Body.Title)
 			assert.Equal(t, "example", response.Body.CreatorID)
@@ -243,12 +244,4 @@ func TestPost_ListDownloadable(t *testing.T) {
 			assert.Equal(t, tt.want, tt.post.ListDownloadable())
 		})
 	}
-}
-
-func readResponseFixture(t *testing.T, name string) []byte {
-	t.Helper()
-
-	data, err := os.ReadFile(filepath.Join("testdata", name))
-	require.NoError(t, err)
-	return data
 }
