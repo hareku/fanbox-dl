@@ -1,8 +1,25 @@
 package fanbox
 
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+)
+
 // Pagination represents the response of https://api.fanbox.cc/post.paginateCreator?creatorId=x.
 type Pagination struct {
 	Pages []string `json:"body"`
+}
+
+// UnmarshalJSON supports both the legacy body array and the current body.pageUrls array.
+func (p *Pagination) UnmarshalJSON(data []byte) error {
+	pages, err := decodeResponseBodyArray[string](data, "pageUrls")
+	if err != nil {
+		return fmt.Errorf("decode pagination response: %w", err)
+	}
+
+	p.Pages = pages
+	return nil
 }
 
 // ListCreatorResponse represents the response of https://api.fanbox.cc/post.listCreator.
@@ -10,9 +27,114 @@ type ListCreatorResponse struct {
 	Body []Post `json:"body"`
 }
 
+// UnmarshalJSON supports both the legacy body array and the current body.posts array.
+func (r *ListCreatorResponse) UnmarshalJSON(data []byte) error {
+	posts, err := decodeResponseBodyArray[Post](data, "posts")
+	if err != nil {
+		return fmt.Errorf("decode list creator response: %w", err)
+	}
+
+	r.Body = posts
+	return nil
+}
+
 // PostInfoResponse represents the response of https://api.fanbox.cc/post.info.
 type PostInfoResponse struct {
 	Body Post `json:"body"`
+}
+
+// UnmarshalJSON supports both the legacy body object and the current body.post object.
+// A body without a post decodes to a zero Post so callers can skip it.
+func (r *PostInfoResponse) UnmarshalJSON(data []byte) error {
+	*r = PostInfoResponse{}
+
+	body, err := decodeResponseBody(data)
+	if err != nil {
+		return fmt.Errorf("decode post info response: %w", err)
+	}
+	if body == nil {
+		return nil
+	}
+
+	var probe struct {
+		Post json.RawMessage `json:"post"`
+		ID   json.RawMessage `json:"id"`
+	}
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return fmt.Errorf("decode post info response body: %w", err)
+	}
+
+	postJSON := probe.Post
+	if isNullJSON(postJSON) {
+		if isNullJSON(probe.ID) {
+			return nil
+		}
+		postJSON = body
+	}
+
+	if err := json.Unmarshal(postJSON, &r.Body); err != nil {
+		return fmt.Errorf("decode post info response post: %w", err)
+	}
+	return nil
+}
+
+type responseEnvelope struct {
+	Body json.RawMessage `json:"body"`
+}
+
+func decodeResponseBody(data []byte) (json.RawMessage, error) {
+	var response responseEnvelope
+	if err := json.Unmarshal(data, &response); err != nil {
+		return nil, fmt.Errorf("decode response envelope: %w", err)
+	}
+
+	body := bytes.TrimSpace(response.Body)
+	if isNullJSON(body) {
+		return nil, nil
+	}
+	return body, nil
+}
+
+func decodeResponseBodyArray[T any](data []byte, wrappedField string) ([]T, error) {
+	body, err := decodeResponseBody(data)
+	if err != nil {
+		return nil, err
+	}
+	if body == nil {
+		return nil, nil
+	}
+
+	if body[0] == '{' {
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(body, &fields); err != nil {
+			return nil, fmt.Errorf("decode response body: %w", err)
+		}
+
+		wrapped, ok := fields[wrappedField]
+		if !ok {
+			return nil, fmt.Errorf("response body does not contain %q", wrappedField)
+		}
+		if isNullJSON(wrapped) {
+			return nil, nil
+		}
+
+		var values []T
+		if err := json.Unmarshal(wrapped, &values); err != nil {
+			return nil, fmt.Errorf("decode response body field %q: %w", wrappedField, err)
+		}
+		return values, nil
+	}
+
+	var values []T
+	if err := json.Unmarshal(body, &values); err != nil {
+		return nil, fmt.Errorf("decode response body: %w", err)
+	}
+	return values, nil
+}
+
+func isNullJSON(raw json.RawMessage) bool {
+	raw = bytes.TrimSpace(raw)
+	return len(raw) == 0 || bytes.Equal(raw, []byte("null"))
 }
 
 // Post represents post attributes.

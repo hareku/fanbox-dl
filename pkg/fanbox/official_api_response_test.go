@@ -1,10 +1,183 @@
 package fanbox
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestPagination_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		fixture string
+	}{
+		{name: "legacy response", fixture: "pagination_legacy.json"},
+		{name: "current response", fixture: "pagination_current.json"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := readResponseFixture(t, tt.fixture)
+
+			var response Pagination
+			require.NoError(t, json.Unmarshal(data, &response))
+			assert.Equal(t, []string{
+				"https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10",
+				"https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10&page=2",
+			}, response.Pages)
+		})
+	}
+}
+
+func TestListCreatorResponse_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		fixture string
+	}{
+		{name: "legacy response", fixture: "list_creator_legacy.json"},
+		{name: "current response", fixture: "list_creator_current.json"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := readResponseFixture(t, tt.fixture)
+
+			var response ListCreatorResponse
+			require.NoError(t, json.Unmarshal(data, &response))
+			require.Len(t, response.Body, 2)
+			assert.Equal(t, "1001", response.Body[0].ID)
+			assert.Equal(t, "First post", response.Body[0].Title)
+			assert.Equal(t, "1002", response.Body[1].ID)
+			assert.Equal(t, "Second post", response.Body[1].Title)
+		})
+	}
+}
+
+func TestPostInfoResponse_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		fixture string
+	}{
+		{name: "legacy response", fixture: "post_info_legacy.json"},
+		{name: "current response", fixture: "post_info_current.json"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := readResponseFixture(t, tt.fixture)
+
+			var response PostInfoResponse
+			require.NoError(t, json.Unmarshal(data, &response))
+			assert.Equal(t, "1001", response.Body.ID)
+			assert.Equal(t, "Example post", response.Body.Title)
+			assert.Equal(t, "example", response.Body.CreatorID)
+		})
+	}
+}
+
+func TestOfficialAPIResponses_UnmarshalJSON_EmptyBody(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     string
+		response any
+		want     any
+	}{
+		{
+			name:     "missing body",
+			data:     `{}`,
+			response: &Pagination{},
+			want:     &Pagination{},
+		},
+		{
+			name:     "null body",
+			data:     `{"body":null}`,
+			response: &Pagination{},
+			want:     &Pagination{},
+		},
+		{
+			name:     "null wrapped page URLs",
+			data:     `{"body":{"pageUrls":null}}`,
+			response: &Pagination{},
+			want:     &Pagination{},
+		},
+		{
+			name:     "null posts body",
+			data:     `{"body":null}`,
+			response: &ListCreatorResponse{},
+			want:     &ListCreatorResponse{},
+		},
+		{
+			name:     "post info null body",
+			data:     `{"body":null}`,
+			response: &PostInfoResponse{},
+			want:     &PostInfoResponse{},
+		},
+		{
+			name:     "post info empty object body",
+			data:     `{"body":{}}`,
+			response: &PostInfoResponse{},
+			want:     &PostInfoResponse{},
+		},
+		{
+			name:     "post info null wrapped post",
+			data:     `{"body":{"post":null}}`,
+			response: &PostInfoResponse{},
+			want:     &PostInfoResponse{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, json.Unmarshal([]byte(tt.data), tt.response))
+			assert.Equal(t, tt.want, tt.response)
+		})
+	}
+}
+
+func TestOfficialAPIResponses_UnmarshalJSON_InvalidBody(t *testing.T) {
+	tests := []struct {
+		name       string
+		data       string
+		response   any
+		errorMatch string
+	}{
+		{
+			name:       "pagination missing page URLs",
+			data:       `{"body":{"unexpected":[]}}`,
+			response:   &Pagination{},
+			errorMatch: `response body does not contain "pageUrls"`,
+		},
+		{
+			name:       "wrapped posts is not an array",
+			data:       `{"body":{"posts":{}}}`,
+			response:   &ListCreatorResponse{},
+			errorMatch: `decode response body field "posts"`,
+		},
+		{
+			name:       "legacy body is not an array",
+			data:       `{"body":"maintenance"}`,
+			response:   &Pagination{},
+			errorMatch: `decode response body`,
+		},
+		{
+			name:       "post info body is not an object",
+			data:       `{"body":"maintenance"}`,
+			response:   &PostInfoResponse{},
+			errorMatch: `decode post info response body`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := json.Unmarshal([]byte(tt.data), tt.response)
+			require.ErrorContains(t, err, tt.errorMatch)
+		})
+	}
+}
 
 func TestPost_ListDownloadable(t *testing.T) {
 	ptr := func(s string) *string { return &s }
@@ -70,4 +243,12 @@ func TestPost_ListDownloadable(t *testing.T) {
 			assert.Equal(t, tt.want, tt.post.ListDownloadable())
 		})
 	}
+}
+
+func readResponseFixture(t *testing.T, name string) []byte {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join("testdata", name))
+	require.NoError(t, err)
+	return data
 }
