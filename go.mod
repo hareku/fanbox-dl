@@ -1,6 +1,6 @@
 module github.com/hareku/fanbox-dl
 
-go 1.26.4
+go 1.26.7
 
 require (
 	github.com/bogdanfinn/fhttp v0.6.8
