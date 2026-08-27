@@ -199,8 +199,7 @@ func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, d 
 			return true
 		}
 
-		var opErr *net.OpError
-		if errors.As(err, &opErr) {
+		if _, ok := errors.AsType[*net.OpError](err); ok {
 			return true
 		}
 
@@ -209,7 +208,7 @@ func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, d 
 	}
 
 	waitDur := time.Second
-	for retry := 0; retry < 10; retry++ {
+	for range 10 {
 		if err := c.download(ctx, post, order, d); err != nil {
 			if !shouldRetry(err) {
 				return fmt.Errorf("download error: %w", err)

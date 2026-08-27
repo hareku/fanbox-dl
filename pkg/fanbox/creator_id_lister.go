@@ -24,7 +24,7 @@ func (c *CreatorIDLister) Do(ctx context.Context, in *CreatorIDListerDoInput) ([
 		return nil, fmt.Errorf("list all creator IDs: %w", err)
 	}
 
-	ignoreMap := map[string]interface{}{}
+	ignoreMap := map[string]any{}
 	for _, id := range in.IgnoreCreatorIDs {
 		ignoreMap[id] = nil
 	}
@@ -44,7 +44,7 @@ func (c *CreatorIDLister) all(ctx context.Context, in *CreatorIDListerDoInput) (
 		return in.InputCreatorIDs, nil
 	}
 
-	ids := map[string]interface{}{}
+	ids := map[string]any{}
 
 	if in.IncludeSupporting {
 		plans := PlanListSupportingResponse{}
