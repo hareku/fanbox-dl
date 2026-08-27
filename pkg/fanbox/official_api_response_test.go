@@ -9,12 +9,16 @@ import (
 )
 
 const (
-	paginationLegacyResponse   = `{"body":["https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10","https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10&page=2"]}`
-	paginationCurrentResponse  = `{"body":{"pageUrls":["https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10","https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10&page=2"]}}`
-	listCreatorLegacyResponse  = `{"body":[{"id":"1001","title":"First post"},{"id":"1002","title":"Second post"}]}`
-	listCreatorCurrentResponse = `{"body":{"posts":[{"id":"1001","title":"First post"},{"id":"1002","title":"Second post"}]}}`
-	postInfoLegacyResponse     = `{"body":{"id":"1001","title":"Example post","creatorId":"example"}}`
-	postInfoCurrentResponse    = `{"body":{"post":{"id":"1001","title":"Example post","creatorId":"example"}}}`
+	paginationLegacyResponse      = `{"body":["https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10","https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10&page=2"]}`
+	paginationCurrentResponse     = `{"body":{"pageUrls":["https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10","https://api.fanbox.cc/post.listCreator?creatorId=example&limit=10&page=2"]}}`
+	listCreatorLegacyResponse     = `{"body":[{"id":"1001","title":"First post"},{"id":"1002","title":"Second post"}]}`
+	listCreatorCurrentResponse    = `{"body":{"posts":[{"id":"1001","title":"First post"},{"id":"1002","title":"Second post"}]}}`
+	postInfoLegacyResponse        = `{"body":{"id":"1001","title":"Example post","creatorId":"example"}}`
+	postInfoCurrentResponse       = `{"body":{"post":{"id":"1001","title":"Example post","creatorId":"example"}}}`
+	listSupportingLegacyResponse  = `{"body":[{"creatorId":"supported-creator"},{"creatorId":"shared-creator"}]}`
+	listSupportingCurrentResponse = `{"body":{"plans":[{"creatorId":"supported-creator","title":"Example plan"},{"creatorId":"shared-creator","title":"Shared plan"}]}}`
+	listFollowingLegacyResponse   = `{"body":[{"creatorId":"followed-creator"},{"creatorId":"shared-creator"}]}`
+	listFollowingCurrentResponse  = `{"body":{"creators":[{"creatorId":"followed-creator","isFollowed":true},{"creatorId":"shared-creator","isFollowed":true}]}}`
 )
 
 func TestPagination_UnmarshalJSON(t *testing.T) {
@@ -80,6 +84,48 @@ func TestPostInfoResponse_UnmarshalJSON(t *testing.T) {
 	}
 }
 
+func TestPlanListSupportingResponse_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name string
+		data string
+	}{
+		{name: "legacy response", data: listSupportingLegacyResponse},
+		{name: "current response", data: listSupportingCurrentResponse},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var response PlanListSupportingResponse
+			require.NoError(t, json.Unmarshal([]byte(tt.data), &response))
+			assert.Equal(t, []Plan{
+				{CreatorID: "supported-creator"},
+				{CreatorID: "shared-creator"},
+			}, response.Body)
+		})
+	}
+}
+
+func TestPlanListFollowingResponse_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name string
+		data string
+	}{
+		{name: "legacy response", data: listFollowingLegacyResponse},
+		{name: "current response", data: listFollowingCurrentResponse},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var response PlanListFollowingResponse
+			require.NoError(t, json.Unmarshal([]byte(tt.data), &response))
+			assert.Equal(t, []Plan{
+				{CreatorID: "followed-creator"},
+				{CreatorID: "shared-creator"},
+			}, response.Body.Creators)
+		})
+	}
+}
+
 func TestOfficialAPIResponses_UnmarshalJSON_EmptyBody(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -129,6 +175,30 @@ func TestOfficialAPIResponses_UnmarshalJSON_EmptyBody(t *testing.T) {
 			response: &PostInfoResponse{},
 			want:     &PostInfoResponse{},
 		},
+		{
+			name:     "supporting plans null body",
+			data:     `{"body":null}`,
+			response: &PlanListSupportingResponse{},
+			want:     &PlanListSupportingResponse{},
+		},
+		{
+			name:     "supporting plans null wrapped array",
+			data:     `{"body":{"plans":null}}`,
+			response: &PlanListSupportingResponse{},
+			want:     &PlanListSupportingResponse{},
+		},
+		{
+			name:     "following creators null body",
+			data:     `{"body":null}`,
+			response: &PlanListFollowingResponse{},
+			want:     &PlanListFollowingResponse{},
+		},
+		{
+			name:     "following creators null wrapped array",
+			data:     `{"body":{"creators":null}}`,
+			response: &PlanListFollowingResponse{},
+			want:     &PlanListFollowingResponse{},
+		},
 	}
 
 	for _, tt := range tests {
@@ -169,6 +239,18 @@ func TestOfficialAPIResponses_UnmarshalJSON_InvalidBody(t *testing.T) {
 			data:       `{"body":"maintenance"}`,
 			response:   &PostInfoResponse{},
 			errorMatch: `decode post info response body`,
+		},
+		{
+			name:       "supporting plans missing plans",
+			data:       `{"body":{"unexpected":[]}}`,
+			response:   &PlanListSupportingResponse{},
+			errorMatch: `response body does not contain "plans"`,
+		},
+		{
+			name:       "following creators is not an array",
+			data:       `{"body":{"creators":{}}}`,
+			response:   &PlanListFollowingResponse{},
+			errorMatch: `decode response body field "creators"`,
 		},
 	}
 

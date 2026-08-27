@@ -264,8 +264,30 @@ type PlanListSupportingResponse struct {
 	Body []Plan `json:"body"`
 }
 
+// UnmarshalJSON supports both the legacy body array and the current body.plans array.
+func (r *PlanListSupportingResponse) UnmarshalJSON(data []byte) error {
+	plans, err := decodeResponseBodyArray[Plan](data, "plans")
+	if err != nil {
+		return fmt.Errorf("decode list supporting plans response: %w", err)
+	}
+
+	r.Body = plans
+	return nil
+}
+
 type PlanListFollowingResponse struct {
 	Body PlanListCreators `json:"body"`
+}
+
+// UnmarshalJSON supports both the legacy body array and the current body.creators array.
+func (r *PlanListFollowingResponse) UnmarshalJSON(data []byte) error {
+	creators, err := decodeResponseBodyArray[Plan](data, "creators")
+	if err != nil {
+		return fmt.Errorf("decode list following creators response: %w", err)
+	}
+
+	r.Body.Creators = creators
+	return nil
 }
 
 type PlanListCreators struct {
