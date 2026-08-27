@@ -23,3 +23,5 @@ images/
 dist/
 
 .envrc
+
+/tmp/
