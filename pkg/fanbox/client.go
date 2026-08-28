@@ -24,6 +24,7 @@ type Client struct {
 	SkipOnError       bool
 	OfficialAPIClient *OfficialAPIClient
 	Storage           *LocalStorage
+	DateFilter        *DatePredicate
 }
 
 func (c *Client) Run(ctx context.Context, creatorID string) error {
@@ -59,6 +60,10 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 				slog.DebugContext(ctx, "No more new assets")
 				return nil
 			}
+			if errors.Is(err, errDateOutOfRage) {
+				slog.DebugContext(ctx, "Not in daterange")
+				return nil
+			}
 			return fmt.Errorf("handle page: %w", err)
 		}
 	}
@@ -72,6 +77,11 @@ func (c *Client) handlePage(ctx context.Context, content *ListCreatorResponse) e
 			if errors.Is(err, errAlreadyDownloaded) && item.IsPinned {
 				continue
 			}
+
+			if errors.Is(err, errDateOutOfRage) && item.IsPinned {
+				continue
+			}
+
 			return fmt.Errorf("handle post: %w", err)
 		}
 	}
@@ -99,6 +109,12 @@ func (c *Client) handlePost(ctx context.Context, item Post) error {
 		return fmt.Errorf("get post: %w", err)
 	}
 	post := postResp.Body
+	if c.DateFilter != nil {
+		var date, _ = parseDateOnly(post.PublishedDateTime)
+		if !c.DateFilter.Matches(date) {
+			return errDateOutOfRage
+		}
+	}
 
 	// post.info may return a restricted or empty body for posts we can't access
 	if post.IsRestricted || post.Body == nil {
@@ -145,6 +161,7 @@ func (c *Client) handlePost(ctx context.Context, item Post) error {
 }
 
 var errAlreadyDownloaded = errors.New("already downloaded")
+var errDateOutOfRage = errors.New("out of daterange")
 
 func (c *Client) handleAsset(ctx context.Context, post Post, order int, d Downloadable) error {
 	if _, ok := d.(File); ok && c.SkipFiles {
