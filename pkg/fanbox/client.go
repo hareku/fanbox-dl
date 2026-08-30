@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hareku/fanbox-dl/internal/ctxval"
+	"github.com/hareku/fanbox-dl/internal/tlsclient"
 	"golang.org/x/net/http2"
 )
 
@@ -194,24 +195,19 @@ func (c *Client) handleAsset(ctx context.Context, post Post, order int, d Downlo
 }
 
 func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, d Downloadable) error {
-	shouldRetry := func(err error) bool {
-		if errors.Is(err, io.ErrUnexpectedEOF) {
-			return true
-		}
-
-		if _, ok := errors.AsType[*net.OpError](err); ok {
-			return true
-		}
-
-		var goAwayErr *http2.GoAwayError
-		return errors.As(err, &goAwayErr)
-	}
-
 	waitDur := time.Second
-	for range 10 {
+	var lastErr error
+	for attempt := range 10 {
 		if err := c.download(ctx, post, order, d); err != nil {
-			if !shouldRetry(err) {
+			lastErr = err
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			if !isRetryableDownloadError(err) {
 				return fmt.Errorf("download error: %w", err)
+			}
+			if attempt == 9 {
+				break
 			}
 
 			slog.ErrorContext(ctx, "Download error, retrying", "error", err, "wait", waitDur)
@@ -222,9 +218,26 @@ func (c *Client) downloadWithRetry(ctx context.Context, post Post, order int, d 
 			}
 			continue
 		}
-		break
+		return nil
 	}
-	return nil
+	return fmt.Errorf("download error after retries: %w", lastErr)
+}
+
+func isRetryableDownloadError(err error) bool {
+	if errors.Is(err, tlsclient.ErrRequestIdleTimeout) {
+		return true
+	}
+
+	if errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+
+	if _, ok := errors.AsType[*net.OpError](err); ok {
+		return true
+	}
+
+	var goAwayErr *http2.GoAwayError
+	return errors.As(err, &goAwayErr)
 }
 
 var ErrStatusForbidden = errors.New("status code 403")

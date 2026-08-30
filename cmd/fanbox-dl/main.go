@@ -131,6 +131,11 @@ var removeUnprintableCharsFlag = &cli.BoolFlag{
 	Value: false,
 	Usage: "Whether to remove unprintable characters from file names.",
 }
+var requestIdleTimeoutFlag = &cli.UintFlag{
+	Name:  "request-idle-timeout",
+	Value: 30,
+	Usage: "Maximum seconds without receiving response data. Zero disables the timeout.",
+}
 
 var app = &cli.App{
 	Name:  "fanbox-dl",
@@ -154,6 +159,7 @@ var app = &cli.App{
 		verboseFlag,
 		skipOnErrorFlag,
 		removeUnprintableCharsFlag,
+		requestIdleTimeoutFlag,
 	},
 	Action: func(c *cli.Context) error {
 		applog.InitLogger(c.Bool(verboseFlag.Name))
@@ -189,7 +195,11 @@ var app = &cli.App{
 			return retryablehttp.DefaultRetryPolicy(ctx, resp, nil)
 		}
 
-		tlsTransp, err := tlsclient.NewTransportWithOptions(tls_client.NewNoopLogger(), tls_client.WithClientProfile(profiles.Chrome_146_PSK))
+		tlsTransp, err := tlsclient.NewTransportWithIdleTimeout(
+			tls_client.NewNoopLogger(),
+			time.Duration(c.Uint(requestIdleTimeoutFlag.Name))*time.Second,
+			tls_client.WithClientProfile(profiles.Chrome_146_PSK),
+		)
 		if err != nil {
 			return fmt.Errorf("create tls transport: %w", err)
 		}
