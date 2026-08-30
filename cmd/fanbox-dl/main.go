@@ -131,6 +131,11 @@ var removeUnprintableCharsFlag = &cli.BoolFlag{
 	Value: false,
 	Usage: "Whether to remove unprintable characters from file names.",
 }
+var requestIdleTimeoutFlag = &cli.UintFlag{
+	Name:  "request-idle-timeout",
+	Value: uint(tlsclient.DefaultRequestIdleTimeout / time.Second),
+	Usage: "Maximum seconds without receiving response data. Zero disables the timeout.",
+}
 
 var app = &cli.App{
 	Name:  "fanbox-dl",
@@ -154,6 +159,7 @@ var app = &cli.App{
 		verboseFlag,
 		skipOnErrorFlag,
 		removeUnprintableCharsFlag,
+		requestIdleTimeoutFlag,
 	},
 	Action: func(c *cli.Context) error {
 		applog.InitLogger(c.Bool(verboseFlag.Name))
@@ -174,22 +180,21 @@ var app = &cli.App{
 			slog.Debug("Using cookie", "cookie_bytes", len(v))
 			cookieStr = v
 		}
+		requestIdleTimeout, err := parseRequestIdleTimeout(uint64(c.Uint(requestIdleTimeoutFlag.Name)))
+		if err != nil {
+			return err
+		}
 
 		httpClient := retryablehttp.NewClient()
 		httpClient.HTTPClient.Jar = fanbox.NewCookieJar()
 		httpClient.Logger = applog.NewRetryableLeveledLogger(slog.Default())
-		httpClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
-			if err != nil {
-				return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
-			}
-			b, err := fanbox.IsFailedToThumbnailingErr(resp)
-			if err == nil && b {
-				return false, fanbox.ErrFailedToThumbnailing
-			}
-			return retryablehttp.DefaultRetryPolicy(ctx, resp, nil)
-		}
+		httpClient.CheckRetry = checkRetry
 
-		tlsTransp, err := tlsclient.NewTransportWithOptions(tls_client.NewNoopLogger(), tls_client.WithClientProfile(profiles.Chrome_146_PSK))
+		tlsTransp, err := tlsclient.NewTransportWithIdleTimeout(
+			tls_client.NewNoopLogger(),
+			requestIdleTimeout,
+			tls_client.WithClientProfile(profiles.Chrome_146_PSK),
+		)
 		if err != nil {
 			return fmt.Errorf("create tls transport: %w", err)
 		}
@@ -249,6 +254,33 @@ var app = &cli.App{
 		slog.InfoContext(ctx, "Completed.", "duration", time.Since(startedAt).Round(time.Millisecond*100))
 		return nil
 	},
+}
+
+const maxRequestIdleTimeoutSeconds uint64 = (1<<63 - 1) / uint64(time.Second)
+
+func parseRequestIdleTimeout(seconds uint64) (time.Duration, error) {
+	if seconds > maxRequestIdleTimeoutSeconds {
+		return 0, fmt.Errorf("--%s must not exceed %d seconds", requestIdleTimeoutFlag.Name, maxRequestIdleTimeoutSeconds)
+	}
+	return time.Duration(seconds) * time.Second, nil
+}
+
+func checkRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	if ctx.Err() != nil {
+		return false, ctx.Err()
+	}
+	if errors.Is(err, tlsclient.ErrRequestIdleTimeout) {
+		return false, nil
+	}
+	if err != nil {
+		return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+	}
+
+	b, err := fanbox.IsFailedToThumbnailingErr(resp)
+	if err == nil && b {
+		return false, fanbox.ErrFailedToThumbnailing
+	}
+	return retryablehttp.DefaultRetryPolicy(ctx, resp, nil)
 }
 
 func main() {

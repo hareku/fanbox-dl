@@ -1,7 +1,11 @@
 package tlsclient
 
 import (
+	"context"
+	"errors"
 	"net/http"
+	"sync/atomic"
+	"time"
 
 	fhttp "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
@@ -9,49 +13,104 @@ import (
 
 // Transport implements net/http.RoundTripper using tls-client.HttpClient
 type Transport struct {
-	client tls_client.HttpClient
+	client             tls_client.HttpClient
+	requestIdleTimeout time.Duration
 }
 
 // Ensure Transport implements http.RoundTripper
 var _ http.RoundTripper = (*Transport)(nil)
 
+// DefaultRequestIdleTimeout is the default maximum interval without response data.
+const DefaultRequestIdleTimeout = 30 * time.Second
+
 // NewTransportWithOptions creates a new Transport with the given options
 func NewTransportWithOptions(logger tls_client.Logger, options ...tls_client.HttpClientOption) (*Transport, error) {
-	// Ensure no redirect following for RoundTripper compatibility
-	options = append(options, tls_client.WithNotFollowRedirects())
+	return NewTransportWithIdleTimeout(logger, DefaultRequestIdleTimeout, options...)
+}
 
-	client, err := tls_client.NewHttpClient(logger, options...)
+// NewTransportWithIdleTimeout creates a new Transport with the given request
+// idle timeout and tls-client options. A zero timeout disables idle checks.
+func NewTransportWithIdleTimeout(logger tls_client.Logger, idleTimeout time.Duration, options ...tls_client.HttpClientOption) (*Transport, error) {
+	// Disable tls-client's total timeout by default; callers may override it.
+	clientOptions := []tls_client.HttpClientOption{tls_client.WithTimeoutSeconds(0)}
+	clientOptions = append(clientOptions, options...)
+
+	// Ensure no redirect following for RoundTripper compatibility.
+	clientOptions = append(clientOptions, tls_client.WithNotFollowRedirects())
+
+	client, err := tls_client.NewHttpClient(logger, clientOptions...)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Transport{
-		client: client,
+		client:             client,
+		requestIdleTimeout: idleTimeout,
 	}, nil
 }
 
 // RoundTrip executes a single HTTP transaction
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
+	request := req
+	cancel := context.CancelFunc(func() {})
+	var timedOut atomic.Bool
+	var timer *time.Timer
+	var timerDone chan struct{}
+	stopTimer := func() {
+		if timer != nil && !timer.Stop() {
+			<-timerDone
+		}
+	}
+	if t.requestIdleTimeout > 0 {
+		ctx, cancelRequest := context.WithCancel(req.Context())
+		cancel = cancelRequest
+		request = req.WithContext(ctx)
+
+		timerDone = make(chan struct{})
+		timer = time.AfterFunc(t.requestIdleTimeout, func() {
+			timedOut.Store(true)
+			cancelRequest()
+			close(timerDone)
+		})
+	}
+
 	// Convert net/http.Request to fhttp.Request
-	fReq, err := convertToFhttpRequest(req)
+	fReq, err := convertToFhttpRequest(request)
 	if err != nil {
+		stopTimer()
+		cancel()
 		return nil, err
 	}
 
 	// Execute the request
 	fResp, err := t.client.Do(fReq)
+	stopTimer()
+	if timedOut.Load() {
+		if fResp != nil && fResp.Body != nil {
+			_ = fResp.Body.Close()
+		}
+		cancel()
+		return nil, newRequestIdleTimeoutError(t.requestIdleTimeout)
+	}
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
 	// Convert fhttp.Response to net/http.Response
-	resp, err := convertFromFhttpResponse(fResp, req)
+	resp, err := convertFromFhttpResponse(fResp, request)
 	if err != nil {
+		cancel()
 		// Close the original response body if conversion fails
 		if fResp != nil && fResp.Body != nil {
 			_ = fResp.Body.Close()
 		}
 		return nil, err
+	}
+	if resp.Body != nil && t.requestIdleTimeout > 0 {
+		resp.Body = newIdleTimeoutBody(resp.Body, t.requestIdleTimeout, cancel)
+	} else {
+		cancel()
 	}
 
 	return resp, nil
@@ -104,7 +163,7 @@ func convertToFhttpRequest(req *http.Request) (*fhttp.Request, error) {
 // convertFromFhttpResponse converts fhttp.Response to net/http.Response
 func convertFromFhttpResponse(fResp *fhttp.Response, originalReq *http.Request) (*http.Response, error) {
 	if fResp == nil {
-		return nil, nil
+		return nil, errors.New("fhttp response is nil")
 	}
 
 	// Create new net/http.Response
