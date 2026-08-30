@@ -2,6 +2,7 @@ package tlsclient
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -162,7 +163,7 @@ func convertToFhttpRequest(req *http.Request) (*fhttp.Request, error) {
 // convertFromFhttpResponse converts fhttp.Response to net/http.Response
 func convertFromFhttpResponse(fResp *fhttp.Response, originalReq *http.Request) (*http.Response, error) {
 	if fResp == nil {
-		return nil, nil
+		return nil, errors.New("fhttp response is nil")
 	}
 
 	// Create new net/http.Response

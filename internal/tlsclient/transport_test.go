@@ -81,10 +81,11 @@ func TestTransportRequestIdleTimeoutWhileWaitingForHeaders(t *testing.T) {
 func TestTransportResponseBodyIdleTimeoutResetsOnProgress(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		flusher, _ := w.(http.Flusher)
 		for _, chunk := range []string{"still ", "making ", "steady ", "progress"} {
 			_, _ = io.WriteString(w, chunk)
-			flusher.Flush()
+			if flusher, ok := w.(http.Flusher); ok {
+				flusher.Flush()
+			}
 			time.Sleep(100 * time.Millisecond)
 		}
 	}))
@@ -164,10 +165,20 @@ func TestTransportResponseUsesTransactionContext(t *testing.T) {
 	require.NoError(t, err)
 	resp, err := (&http.Client{Transport: transport}).Do(req)
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, resp.Body.Close()) })
 
-	require.NoError(t, resp.Request.Context().Err())
-	require.NoError(t, resp.Body.Close())
+	beforeCloseErr := resp.Request.Context().Err()
+	closeErr := resp.Body.Close()
+	require.NoError(t, beforeCloseErr)
+	require.NoError(t, closeErr)
 	require.ErrorIs(t, resp.Request.Context().Err(), context.Canceled)
 	require.NoError(t, req.Context().Err())
+}
+
+func TestConvertFromFhttpResponseRejectsNilResponse(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "https://example.com", nil)
+
+	resp, err := convertFromFhttpResponse(nil, req)
+
+	require.EqualError(t, err, "fhttp response is nil")
+	require.Nil(t, resp)
 }
