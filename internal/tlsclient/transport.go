@@ -19,6 +19,7 @@ type Transport struct {
 // Ensure Transport implements http.RoundTripper
 var _ http.RoundTripper = (*Transport)(nil)
 
+// DefaultRequestIdleTimeout is the default maximum interval without response data.
 const DefaultRequestIdleTimeout = 30 * time.Second
 
 // NewTransportWithOptions creates a new Transport with the given options
@@ -29,10 +30,7 @@ func NewTransportWithOptions(logger tls_client.Logger, options ...tls_client.Htt
 // NewTransportWithIdleTimeout creates a new Transport with the given request
 // idle timeout and tls-client options. A zero timeout disables idle checks.
 func NewTransportWithIdleTimeout(logger tls_client.Logger, idleTimeout time.Duration, options ...tls_client.HttpClientOption) (*Transport, error) {
-	// A net/http.Transport does not impose a deadline on the entire request.
-	// Match that behavior so large response bodies are not cut off by
-	// tls-client's default 30-second timeout. Callers can still provide an
-	// explicit timeout option, and request contexts continue to cancel requests.
+	// Disable tls-client's total timeout by default; callers may override it.
 	clientOptions := []tls_client.HttpClientOption{tls_client.WithTimeoutSeconds(0)}
 	clientOptions = append(clientOptions, options...)
 

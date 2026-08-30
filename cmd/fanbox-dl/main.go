@@ -133,7 +133,7 @@ var removeUnprintableCharsFlag = &cli.BoolFlag{
 }
 var requestIdleTimeoutFlag = &cli.UintFlag{
 	Name:  "request-idle-timeout",
-	Value: 30,
+	Value: uint(tlsclient.DefaultRequestIdleTimeout / time.Second),
 	Usage: "Maximum seconds without receiving response data. Zero disables the timeout.",
 }
 
@@ -184,16 +184,7 @@ var app = &cli.App{
 		httpClient := retryablehttp.NewClient()
 		httpClient.HTTPClient.Jar = fanbox.NewCookieJar()
 		httpClient.Logger = applog.NewRetryableLeveledLogger(slog.Default())
-		httpClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
-			if err != nil {
-				return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
-			}
-			b, err := fanbox.IsFailedToThumbnailingErr(resp)
-			if err == nil && b {
-				return false, fanbox.ErrFailedToThumbnailing
-			}
-			return retryablehttp.DefaultRetryPolicy(ctx, resp, nil)
-		}
+		httpClient.CheckRetry = checkRetry
 
 		tlsTransp, err := tlsclient.NewTransportWithIdleTimeout(
 			tls_client.NewNoopLogger(),
@@ -259,6 +250,24 @@ var app = &cli.App{
 		slog.InfoContext(ctx, "Completed.", "duration", time.Since(startedAt).Round(time.Millisecond*100))
 		return nil
 	},
+}
+
+func checkRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	if ctx.Err() != nil {
+		return false, ctx.Err()
+	}
+	if errors.Is(err, tlsclient.ErrRequestIdleTimeout) {
+		return false, nil
+	}
+	if err != nil {
+		return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+	}
+
+	b, err := fanbox.IsFailedToThumbnailingErr(resp)
+	if err == nil && b {
+		return false, fanbox.ErrFailedToThumbnailing
+	}
+	return retryablehttp.DefaultRetryPolicy(ctx, resp, nil)
 }
 
 func main() {

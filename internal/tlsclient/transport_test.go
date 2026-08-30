@@ -35,7 +35,7 @@ func TestTransportHasNoDefaultRequestTimeout(t *testing.T) {
 	client := &http.Client{Transport: transport}
 	resp, err := client.Get(server.URL)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	t.Cleanup(func() { require.NoError(t, resp.Body.Close()) })
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestTransportResponseBodyIdleTimeout(t *testing.T) {
 
 	resp, err := (&http.Client{Transport: transport}).Get(server.URL)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	t.Cleanup(func() { require.NoError(t, resp.Body.Close()) })
 
 	_, err = io.ReadAll(resp.Body)
 	require.ErrorIs(t, err, ErrRequestIdleTimeout)
@@ -95,7 +95,7 @@ func TestTransportResponseBodyIdleTimeoutResetsOnProgress(t *testing.T) {
 
 	resp, err := (&http.Client{Transport: transport}).Get(server.URL)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	t.Cleanup(func() { require.NoError(t, resp.Body.Close()) })
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
@@ -118,7 +118,7 @@ func TestTransportResponseBodyIdleTimeoutCanBeDisabled(t *testing.T) {
 
 	resp, err := (&http.Client{Transport: transport}).Get(server.URL)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	t.Cleanup(func() { require.NoError(t, resp.Body.Close()) })
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
@@ -144,7 +144,7 @@ func TestTransportHonorsRequestContextCancellation(t *testing.T) {
 
 	resp, err := (&http.Client{Transport: transport}).Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	t.Cleanup(func() { require.NoError(t, resp.Body.Close()) })
 
 	cancel()
 	_, err = io.ReadAll(resp.Body)
