@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hareku/fanbox-dl/internal/tlsclient"
 	"github.com/stretchr/testify/require"
@@ -19,6 +20,25 @@ func TestCheckRetryDoesNotRetryRequestIdleTimeout(t *testing.T) {
 
 	require.NoError(t, err)
 	require.False(t, retry)
+}
+
+func TestRequestIdleTimeout(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		got, err := parseRequestIdleTimeout(30)
+		require.NoError(t, err)
+		require.Equal(t, 30*time.Second, got)
+	})
+
+	t.Run("maximum", func(t *testing.T) {
+		got, err := parseRequestIdleTimeout(maxRequestIdleTimeoutSeconds)
+		require.NoError(t, err)
+		require.Equal(t, time.Duration(maxRequestIdleTimeoutSeconds)*time.Second, got)
+	})
+
+	t.Run("overflow", func(t *testing.T) {
+		_, err := parseRequestIdleTimeout(maxRequestIdleTimeoutSeconds + 1)
+		require.EqualError(t, err, "--request-idle-timeout must not exceed 9223372036 seconds")
+	})
 }
 
 func TestCheckRetryRetainsDefaultHandlingForOtherErrors(t *testing.T) {

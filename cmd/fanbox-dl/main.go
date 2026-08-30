@@ -180,6 +180,10 @@ var app = &cli.App{
 			slog.Debug("Using cookie", "cookie_bytes", len(v))
 			cookieStr = v
 		}
+		requestIdleTimeout, err := parseRequestIdleTimeout(uint64(c.Uint(requestIdleTimeoutFlag.Name)))
+		if err != nil {
+			return err
+		}
 
 		httpClient := retryablehttp.NewClient()
 		httpClient.HTTPClient.Jar = fanbox.NewCookieJar()
@@ -188,7 +192,7 @@ var app = &cli.App{
 
 		tlsTransp, err := tlsclient.NewTransportWithIdleTimeout(
 			tls_client.NewNoopLogger(),
-			time.Duration(c.Uint(requestIdleTimeoutFlag.Name))*time.Second,
+			requestIdleTimeout,
 			tls_client.WithClientProfile(profiles.Chrome_146_PSK),
 		)
 		if err != nil {
@@ -250,6 +254,15 @@ var app = &cli.App{
 		slog.InfoContext(ctx, "Completed.", "duration", time.Since(startedAt).Round(time.Millisecond*100))
 		return nil
 	},
+}
+
+const maxRequestIdleTimeoutSeconds uint64 = (1<<63 - 1) / uint64(time.Second)
+
+func parseRequestIdleTimeout(seconds uint64) (time.Duration, error) {
+	if seconds > maxRequestIdleTimeoutSeconds {
+		return 0, fmt.Errorf("--%s must not exceed %d seconds", requestIdleTimeoutFlag.Name, maxRequestIdleTimeoutSeconds)
+	}
+	return time.Duration(seconds) * time.Second, nil
 }
 
 func checkRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {

@@ -97,7 +97,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	// Convert fhttp.Response to net/http.Response
-	resp, err := convertFromFhttpResponse(fResp, req)
+	resp, err := convertFromFhttpResponse(fResp, request)
 	if err != nil {
 		cancel()
 		// Close the original response body if conversion fails
