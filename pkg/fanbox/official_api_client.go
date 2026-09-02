@@ -56,7 +56,7 @@ func (c *OfficialAPIClient) request(ctx context.Context, method string, url stri
 	return httpClient.Do(req)
 }
 
-func (c *OfficialAPIClient) RequestAndUnwrapJSON(ctx context.Context, method string, url string, v interface{}) error {
+func (c *OfficialAPIClient) RequestAndUnwrapJSON(ctx context.Context, method string, url string, v any) error {
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Pointer || rv.IsNil() {
 		return fmt.Errorf("v should be a pointer")

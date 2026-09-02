@@ -22,5 +22,8 @@ images/
 
 dist/
 
-.vscode
 .envrc
+
+/tmp/
+
+.vscode
