@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,7 +13,6 @@ import (
 	"time"
 
 	tls_client "github.com/bogdanfinn/tls-client"
-	"github.com/bogdanfinn/tls-client/profiles"
 	"github.com/hareku/fanbox-dl/internal/applog"
 	"github.com/hareku/fanbox-dl/internal/tlsclient"
 	"github.com/hareku/fanbox-dl/pkg/fanbox"
@@ -28,11 +28,31 @@ func resolveSessionID(c *cli.Context) string {
 	if v := os.Getenv("FANBOXSESSID"); v != "" {
 		return v
 	}
-	if v := os.Getenv("FANBOX_COOKIE"); v != "" {
-		return v
-	}
 
 	return ""
+}
+
+func resolveCookie(c *cli.Context) string {
+	var cookieStr string
+	if sessID := resolveSessionID(c); sessID != "" {
+		slog.Debug("Using session ID", "sessid_bytes", len(sessID))
+		cookieStr = fmt.Sprintf("FANBOXSESSID=%s", sessID)
+	}
+	if envCookie := os.Getenv("FANBOX_COOKIE"); envCookie != "" {
+		if cookieStr != "" {
+			slog.Warn("session ID and FANBOX_COOKIE are set, FANBOX_COOKIE overrides session ID")
+		}
+		slog.Debug("Using cookie from FANBOX_COOKIE", "cookie_bytes", len(envCookie))
+		cookieStr = envCookie
+	}
+	if v := c.String(cookieFlag.Name); v != "" {
+		if cookieStr != "" {
+			slog.Warn("cookie option is set, cookie option overrides other cookie settings")
+		}
+		slog.Debug("Using cookie", "cookie_bytes", len(v))
+		cookieStr = v
+	}
+	return cookieStr
 }
 
 var (
@@ -70,6 +90,11 @@ var userAgentFlag = &cli.StringFlag{
 	Name:  "user-agent",
 	Usage: "User-Agent for Fanbox API.",
 	Value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+}
+var browserProfileFlag = &cli.StringFlag{
+	Name:  "browser-profile",
+	Usage: "Browser profile to simulate: auto, chrome, or firefox.",
+	Value: fanbox.BrowserProfileAuto,
 }
 var saveDirFlag = &cli.StringFlag{
 	Name:  "save-dir",
@@ -111,6 +136,11 @@ var skipImages = &cli.BoolFlag{
 	Value: false,
 	Usage: "Whether to skip downloading images.",
 }
+var skipTexts = &cli.BoolFlag{
+	Name:  "skip-texts",
+	Value: false,
+	Usage: "Whether to skip downloading post contents as text files.",
+}
 var dryRunFlag = &cli.BoolFlag{
 	Name:  "dry-run",
 	Value: false,
@@ -132,6 +162,18 @@ var removeUnprintableCharsFlag = &cli.BoolFlag{
 	Usage: "Whether to remove unprintable characters from file names.",
 }
 
+var startDateFlag = &cli.StringFlag{
+	Name:  "start-date",
+	Usage: "Only download posts published after this date (format: YYYY-MM-DD).",
+	Value: "",
+}
+
+var endDateFlag = &cli.StringFlag{
+	Name:  "end-date",
+	Usage: "Only download posts published before this date (format: YYYY-MM-DD).",
+	Value: "",
+}
+
 var app = &cli.App{
 	Name:  "fanbox-dl",
 	Usage: "This CLI downloads images of supporting and following creators.",
@@ -141,6 +183,7 @@ var app = &cli.App{
 		ignoreCreatorFlag,
 		sessIDFlag,
 		cookieFlag,
+		browserProfileFlag,
 		saveDirFlag,
 		dirByPostFlag,
 		dirByPlanFlag,
@@ -150,10 +193,13 @@ var app = &cli.App{
 		followingFlag,
 		skipFiles,
 		skipImages,
+		skipTexts,
 		dryRunFlag,
 		verboseFlag,
 		skipOnErrorFlag,
 		removeUnprintableCharsFlag,
+		startDateFlag,
+		endDateFlag,
 	},
 	Action: func(c *cli.Context) error {
 		applog.InitLogger(c.Bool(verboseFlag.Name))
@@ -162,23 +208,41 @@ var app = &cli.App{
 			return nil
 		}
 
-		var cookieStr string
-		if sessID := resolveSessionID(c); sessID != "" {
-			slog.Debug("Using session ID", "sessid_bytes", len(sessID))
-			cookieStr = fmt.Sprintf("FANBOXSESSID=%s", sessID)
+		cookieStr := resolveCookie(c)
+		userAgent := c.String(userAgentFlag.Name)
+		browserProfile, err := fanbox.ResolveBrowserProfile(userAgent, c.String(browserProfileFlag.Name))
+		if err != nil {
+			return err
 		}
-		if v := c.String(cookieFlag.Name); v != "" {
-			if cookieStr != "" {
-				slog.Warn("session ID and cookie are set, cookie option overrides session ID option")
+		slog.Debug("Resolved browser profile",
+			"family", browserProfile.Family,
+			"tls_profile", browserProfile.TLSProfileName,
+			"requested_major", browserProfile.RequestedBrowserMajor(),
+		)
+
+		// Parse date ranges if provided
+		var startDate, endDate *time.Time
+		if startDateStr := c.String(startDateFlag.Name); startDateStr != "" {
+			parsedTime, err := time.Parse("2006-01-02", startDateStr)
+			if err != nil {
+				return fmt.Errorf("invalid start date format (use YYYY-MM-DD): %w", err)
 			}
-			slog.Debug("Using cookie", "cookie_bytes", len(v))
-			cookieStr = v
+			startDate = &parsedTime
 		}
 
-		httpClient := retryablehttp.NewClient()
-		httpClient.HTTPClient.Jar = fanbox.NewCookieJar()
-		httpClient.Logger = applog.NewRetryableLeveledLogger(slog.Default())
-		httpClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		if endDateStr := c.String(endDateFlag.Name); endDateStr != "" {
+			parsedTime, err := time.Parse("2006-01-02", endDateStr)
+			if err != nil {
+				return fmt.Errorf("invalid end date format (use YYYY-MM-DD): %w", err)
+			}
+			// Set end date to the end of the specified day
+			parsedTime = parsedTime.Add(24*time.Hour - time.Second)
+			endDate = &parsedTime
+		}
+
+		cookieJar := fanbox.NewCookieJar()
+		retryLogger := applog.NewRetryableLeveledLogger(slog.Default())
+		checkRetry := func(ctx context.Context, resp *http.Response, err error) (bool, error) {
 			if err != nil {
 				return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 			}
@@ -188,17 +252,47 @@ var app = &cli.App{
 			}
 			return retryablehttp.DefaultRetryPolicy(ctx, resp, nil)
 		}
+		newHTTPClient := func() *retryablehttp.Client {
+			client := retryablehttp.NewClient()
+			client.HTTPClient.Jar = cookieJar
+			client.Logger = retryLogger
+			client.CheckRetry = checkRetry
+			return client
+		}
 
-		tlsTransp, err := tlsclient.NewTransportWithOptions(tls_client.NewNoopLogger(), tls_client.WithClientProfile(profiles.Chrome_146_PSK))
+		httpClient := newHTTPClient()
+
+		tlsTransp, err := tlsclient.NewTransportWithOptions(
+			tls_client.NewNoopLogger(),
+			tls_client.WithClientProfile(browserProfile.TLSProfile),
+		)
 		if err != nil {
 			return fmt.Errorf("create tls transport: %w", err)
 		}
 		httpClient.HTTPClient.Transport = tlsTransp
 
+		assetHTTPClient := newHTTPClient()
+		assetTLSTransp, err := tlsclient.NewTransportWithOptions(
+			tls_client.NewNoopLogger(),
+			tls_client.WithClientProfile(browserProfile.TLSProfile),
+			tls_client.WithTimeoutSeconds(24*60*60),
+		)
+		if err != nil {
+			return fmt.Errorf("create asset TLS transport: %w", err)
+		}
+		assetHTTPClient.HTTPClient.Transport = assetTLSTransp
+
 		api := &fanbox.OfficialAPIClient{
-			HTTPClient: httpClient,
-			Cookie:     cookieStr,
-			UserAgent:  c.String(userAgentFlag.Name),
+			HTTPClient:      httpClient,
+			AssetHTTPClient: assetHTTPClient,
+			Cookie:          cookieStr,
+			UserAgent:       userAgent,
+			BrowserProfile:  browserProfile,
+		}
+
+		var progressWriter io.Writer
+		if stdoutInfo, err := os.Stdout.Stat(); err == nil && stdoutInfo.Mode()&os.ModeCharDevice != 0 {
+			progressWriter = os.Stdout
 		}
 
 		client := &fanbox.Client{
@@ -206,8 +300,12 @@ var app = &cli.App{
 			DryRun:            c.Bool(dryRunFlag.Name),
 			SkipFiles:         c.Bool(skipFiles.Name),
 			SkipImages:        c.Bool(skipImages.Name),
+			SkipTexts:         c.Bool(skipTexts.Name),
 			SkipOnError:       c.Bool(skipOnErrorFlag.Name),
 			OfficialAPIClient: api,
+			StartDate:         startDate,
+			EndDate:           endDate,
+			ProgressWriter:    progressWriter,
 			Storage: &fanbox.LocalStorage{
 				SaveDir:   c.String(saveDirFlag.Name),
 				DirByPost: c.Bool(dirByPostFlag.Name),

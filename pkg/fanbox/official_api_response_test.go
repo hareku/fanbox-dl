@@ -327,3 +327,37 @@ func TestPost_ListDownloadable(t *testing.T) {
 		})
 	}
 }
+
+func TestPostInfoResponseUnmarshal(t *testing.T) {
+	const response = `{
+		"body": {
+			"post": {
+				"id": "12345678",
+				"title": "Test_title",
+				"feeRequired": 500,
+				"isRestricted": false,
+				"body": {
+					"blocks": [],
+					"imageMap": {},
+					"fileMap": {}
+				}
+			}
+		}
+	}`
+
+	var got PostInfoResponse
+	if err := json.Unmarshal([]byte(response), &got); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+
+	post := got.Body.Post
+	if post.ID != "12345678" {
+		t.Errorf("post ID = %q, want %q", post.ID, "12345678")
+	}
+	if post.FeeRequired != 500 {
+		t.Errorf("fee required = %d, want 500", post.FeeRequired)
+	}
+	if post.Body == nil {
+		t.Fatal("post body is nil")
+	}
+}

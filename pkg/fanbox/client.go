@@ -21,9 +21,13 @@ type Client struct {
 	DryRun            bool
 	SkipFiles         bool
 	SkipImages        bool
+	SkipTexts         bool
 	SkipOnError       bool
 	OfficialAPIClient *OfficialAPIClient
+	ProgressWriter    io.Writer
 	Storage           *LocalStorage
+	StartDate         *time.Time
+	EndDate           *time.Time
 }
 
 func (c *Client) Run(ctx context.Context, creatorID string) error {
@@ -43,6 +47,12 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 	}
 	slog.DebugContext(ctx, "Found pages", "pages", len(pagination.Pages))
 
+	if c.StartDate != nil || c.EndDate != nil {
+		slog.InfoContext(ctx, "Date filtering active",
+			"start_date", c.formatDateOrNil(c.StartDate),
+			"end_date", c.formatDateOrNil(c.EndDate))
+	}
+
 	for i, page := range pagination.Pages {
 		content := ListCreatorResponse{}
 		err := c.OfficialAPIClient.RequestAndUnwrapJSON(ctx, http.MethodGet, page, &content)
@@ -61,8 +71,32 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 			}
 			return fmt.Errorf("handle page: %w", err)
 		}
+
+		// Pages are ordered newest to oldest, so once a page reaches posts
+		// older than the start date, later pages cannot contain matching posts.
+		if c.shouldStopPagination(&content) {
+			slog.InfoContext(ctx, "Reached posts older than start date, stopping pagination")
+			break
+		}
 	}
 	return nil
+}
+
+func (c *Client) shouldStopPagination(content *ListCreatorResponse) bool {
+	if c.StartDate == nil || len(content.Body) == 0 {
+		return false
+	}
+
+	oldestPostTime, err := time.Parse(time.RFC3339, content.Body[len(content.Body)-1].PublishedDateTime)
+	return err == nil && oldestPostTime.Before(*c.StartDate)
+}
+
+// formatDateOrNil returns a formatted date string or "nil" if the date is nil
+func (c *Client) formatDateOrNil(date *time.Time) string {
+	if date == nil {
+		return "nil"
+	}
+	return date.Format("2006-01-02")
 }
 
 func (c *Client) handlePage(ctx context.Context, content *ListCreatorResponse) error {
@@ -81,6 +115,12 @@ func (c *Client) handlePage(ctx context.Context, content *ListCreatorResponse) e
 func (c *Client) handlePost(ctx context.Context, item Post) error {
 	ctx = ctxval.AddSlogAttrs(ctx, slog.String("title", item.Title), slog.String("published_at", item.PublishedDateTime))
 
+	// Skip if the post is outside the date range
+	if !c.isWithinDateRange(item.PublishedDateTime) {
+		slog.DebugContext(ctx, "Skipping post outside date range")
+		return nil
+	}
+
 	if item.IsRestricted {
 		slog.DebugContext(ctx, "Skipping restricted post")
 		return nil
@@ -98,12 +138,17 @@ func (c *Client) handlePost(ctx context.Context, item Post) error {
 	); err != nil {
 		return fmt.Errorf("get post: %w", err)
 	}
-	post := postResp.Body
+	post := postResp.Body.Post
 
 	// post.info may return a restricted or empty body for posts we can't access
 	if post.IsRestricted || post.Body == nil {
 		slog.DebugContext(ctx, "Skipping restricted or empty post")
 		return nil
+	}
+
+	// Handle text content
+	if err := c.handlePostText(ctx, post); err != nil {
+		return fmt.Errorf("handle post text: %w", err)
 	}
 
 	// for backward-compatibility, split downloadable file's order into two types
@@ -142,6 +187,76 @@ func (c *Client) handlePost(ctx context.Context, item Post) error {
 	}
 
 	return nil
+}
+
+// handlePostText handles saving text content of a post.
+func (c *Client) handlePostText(ctx context.Context, post Post) error {
+	if c.SkipTexts {
+		slog.DebugContext(ctx, "Skip saving text content")
+		return nil
+	}
+
+	textContent := post.GetTextContent()
+	if textContent == "" {
+		slog.DebugContext(ctx, "No text content to save")
+		return nil
+	}
+
+	isDownloaded, err := c.Storage.TextExists(post)
+	if err != nil {
+		if c.SkipOnError {
+			slog.ErrorContext(ctx, "Skip saving text due to error", "error", err)
+			return nil
+		}
+		return fmt.Errorf("check whether text already saved: %w", err)
+	}
+
+	if isDownloaded {
+		slog.DebugContext(ctx, "Text content already saved")
+		return nil
+	}
+
+	if c.DryRun {
+		slog.InfoContext(ctx, "Skip saving text content due to dry-run mode")
+		return nil
+	}
+
+	slog.InfoContext(ctx, "Saving text content")
+	if err := c.Storage.SaveText(post); err != nil {
+		if c.SkipOnError {
+			slog.ErrorContext(ctx, "Skip saving text due to error", "error", err)
+			return nil
+		}
+		return fmt.Errorf("save text content: %w", err)
+	}
+
+	return nil
+}
+
+// isWithinDateRange checks if the post's published date is within the specified date range
+func (c *Client) isWithinDateRange(publishedDateTimeStr string) bool {
+	// If no date filters are set, include all posts
+	if c.StartDate == nil && c.EndDate == nil {
+		return true
+	}
+
+	publishedTime, err := time.Parse(time.RFC3339, publishedDateTimeStr)
+	if err != nil {
+		// If we can't parse the date, include the post by default
+		return true
+	}
+
+	// Check if post is after start date (if specified)
+	if c.StartDate != nil && publishedTime.Before(*c.StartDate) {
+		return false
+	}
+
+	// Check if post is before end date (if specified)
+	if c.EndDate != nil && publishedTime.After(*c.EndDate) {
+		return false
+	}
+
+	return true
 }
 
 var errAlreadyDownloaded = errors.New("already downloaded")
@@ -232,7 +347,7 @@ var ErrStatusForbidden = errors.New("status code 403")
 func (c *Client) download(ctx context.Context, post Post, order int, d Downloadable) error {
 	var resp *http.Response
 
-	resp, err := c.OfficialAPIClient.Request(ctx, http.MethodGet, d.GetURL())
+	resp, err := c.OfficialAPIClient.RequestAsset(ctx, http.MethodGet, d.GetURL())
 	if err != nil {
 		if errors.Is(err, ErrFailedToThumbnailing) {
 			slog.InfoContext(ctx, "The original file is not available (maybe it's a too large), so download a thumbnail instead", "original_file", d.GetURL())
@@ -242,7 +357,7 @@ func (c *Client) download(ctx context.Context, post Post, order int, d Downloada
 			}
 			slog.InfoContext(ctx, "Downloading a thumbnail", "thumbnail_url", tu)
 
-			resp, err = c.OfficialAPIClient.Request(ctx, http.MethodGet, tu)
+			resp, err = c.OfficialAPIClient.RequestAsset(ctx, http.MethodGet, tu)
 			if err != nil {
 				return fmt.Errorf("request error (%s): %w", tu, err)
 			}
@@ -263,9 +378,13 @@ func (c *Client) download(ctx context.Context, post Post, order int, d Downloada
 		return fmt.Errorf("status code %d", resp.StatusCode)
 	}
 
-	if err := c.Storage.Save(post, order, d, resp.Body); err != nil {
+	progressBar := newDownloadProgressBar(c.ProgressWriter)
+	progress := newDownloadProgressReader(resp.Body, resp.ContentLength, progressBar.Update)
+	if err := c.Storage.Save(post, order, d, progress); err != nil {
+		progressBar.Clear()
 		return fmt.Errorf("save a file: %w", err)
 	}
+	progressBar.Finish()
 
 	return nil
 }

@@ -25,3 +25,5 @@ dist/
 .envrc
 
 /tmp/
+
+.vscode

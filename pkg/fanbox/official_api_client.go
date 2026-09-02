@@ -17,26 +17,43 @@ import (
 )
 
 type OfficialAPIClient struct {
-	HTTPClient *retryablehttp.Client
-	Cookie     string
-	UserAgent  string
+	HTTPClient      *retryablehttp.Client
+	AssetHTTPClient *retryablehttp.Client
+	Cookie          string
+	UserAgent       string
+	BrowserProfile  *BrowserProfile
 }
 
 func (c *OfficialAPIClient) Request(ctx context.Context, method string, url string) (*http.Response, error) {
+	return c.request(ctx, method, url, false)
+}
+
+func (c *OfficialAPIClient) RequestAsset(ctx context.Context, method string, url string) (*http.Response, error) {
+	return c.request(ctx, method, url, true)
+}
+
+func (c *OfficialAPIClient) request(ctx context.Context, method string, url string, asset bool) (*http.Response, error) {
 	req, err := retryablehttp.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("http request building error: %w", err)
 	}
 
 	req = req.WithContext(ctx)
-	req.Header.Set("Cookie", c.Cookie)
-	req.Header.Set("Origin", "https://www.fanbox.cc") // If Origin header is not set, FANBOX returns HTTP 400 error.
-	req.Header.Set("Referer", "https://www.fanbox.cc/")
-	req.Header.Set("User-Agent", c.UserAgent)
-	req.Header.Set("Accept", "application/json, text/plain, */*")
-	req.Header.Set("Accept-Encoding", "gzip")
+	profile := c.BrowserProfile
+	if profile == nil {
+		profile = newChromeProfile(c.UserAgent)
+	}
+	if asset {
+		profile.ApplyAssetHeaders(req.Header, c.Cookie, c.UserAgent)
+	} else {
+		profile.ApplyAPIHeaders(req.Header, c.Cookie, c.UserAgent)
+	}
 
-	return c.HTTPClient.Do(req)
+	httpClient := c.HTTPClient
+	if asset && c.AssetHTTPClient != nil {
+		httpClient = c.AssetHTTPClient
+	}
+	return httpClient.Do(req)
 }
 
 func (c *OfficialAPIClient) RequestAndUnwrapJSON(ctx context.Context, method string, url string, v any) error {
@@ -55,6 +72,9 @@ func (c *OfficialAPIClient) RequestAndUnwrapJSON(ctx context.Context, method str
 	}()
 
 	if resp.StatusCode != 200 {
+		if resp.StatusCode == 403 {
+			return ErrStatusForbidden
+		}
 		return fmt.Errorf("status is %s", resp.Status)
 	}
 

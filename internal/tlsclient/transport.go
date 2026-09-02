@@ -2,14 +2,21 @@ package tlsclient
 
 import (
 	"net/http"
+	"net/url"
+	"sync"
 
 	fhttp "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
+	"golang.org/x/net/http/httpproxy"
 )
 
 // Transport implements net/http.RoundTripper using tls-client.HttpClient
 type Transport struct {
-	client tls_client.HttpClient
+	mu       sync.Mutex
+	clients  map[string]tls_client.HttpClient
+	logger   tls_client.Logger
+	options  []tls_client.HttpClientOption
+	proxyFor func(*http.Request) (*url.URL, error)
 }
 
 // Ensure Transport implements http.RoundTripper
@@ -19,6 +26,7 @@ var _ http.RoundTripper = (*Transport)(nil)
 func NewTransportWithOptions(logger tls_client.Logger, options ...tls_client.HttpClientOption) (*Transport, error) {
 	// Ensure no redirect following for RoundTripper compatibility
 	options = append(options, tls_client.WithNotFollowRedirects())
+	proxyFromEnvironment := httpproxy.FromEnvironment().ProxyFunc()
 
 	client, err := tls_client.NewHttpClient(logger, options...)
 	if err != nil {
@@ -26,12 +34,50 @@ func NewTransportWithOptions(logger tls_client.Logger, options ...tls_client.Htt
 	}
 
 	return &Transport{
-		client: client,
+		clients: map[string]tls_client.HttpClient{"": client},
+		logger:  logger,
+		options: append([]tls_client.HttpClientOption(nil), options...),
+		proxyFor: func(req *http.Request) (*url.URL, error) {
+			return proxyFromEnvironment(req.URL)
+		},
 	}, nil
+}
+
+func (t *Transport) clientFor(req *http.Request) (tls_client.HttpClient, error) {
+	proxyURL, err := t.proxyFor(req)
+	if err != nil {
+		return nil, err
+	}
+
+	proxyKey := ""
+	if proxyURL != nil {
+		proxyKey = proxyURL.String()
+	}
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if client, ok := t.clients[proxyKey]; ok {
+		return client, nil
+	}
+
+	options := append([]tls_client.HttpClientOption(nil), t.options...)
+	options = append(options, tls_client.WithProxyUrl(proxyKey))
+	client, err := tls_client.NewHttpClient(t.logger, options...)
+	if err != nil {
+		return nil, err
+	}
+	t.clients[proxyKey] = client
+	return client, nil
 }
 
 // RoundTrip executes a single HTTP transaction
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
+	client, err := t.clientFor(req)
+	if err != nil {
+		return nil, err
+	}
+
 	// Convert net/http.Request to fhttp.Request
 	fReq, err := convertToFhttpRequest(req)
 	if err != nil {
@@ -39,7 +85,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	// Execute the request
-	fResp, err := t.client.Do(fReq)
+	fResp, err := client.Do(fReq)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +105,11 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 // CloseIdleConnections closes any idle connections
 func (t *Transport) CloseIdleConnections() {
-	t.client.CloseIdleConnections()
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for _, client := range t.clients {
+		client.CloseIdleConnections()
+	}
 }
 
 // convertToFhttpRequest converts net/http.Request to fhttp.Request
