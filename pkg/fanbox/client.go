@@ -72,18 +72,23 @@ func (c *Client) Run(ctx context.Context, creatorID string) error {
 			return fmt.Errorf("handle page: %w", err)
 		}
 
-		// Check if we can stop fetching more pages based on dates
-		if c.EndDate != nil && len(content.Body) > 0 {
-			// If the last post on this page is older than the start date,
-			// we don't need to check further pages
-			oldestPostTime, err := time.Parse(time.RFC3339, content.Body[len(content.Body)-1].PublishedDateTime)
-			if err == nil && oldestPostTime.Before(*c.EndDate) {
-				slog.InfoContext(ctx, "Reached posts older than end date, stopping pagination")
-				break
-			}
+		// Pages are ordered newest to oldest, so once a page reaches posts
+		// older than the start date, later pages cannot contain matching posts.
+		if c.shouldStopPagination(&content) {
+			slog.InfoContext(ctx, "Reached posts older than start date, stopping pagination")
+			break
 		}
 	}
 	return nil
+}
+
+func (c *Client) shouldStopPagination(content *ListCreatorResponse) bool {
+	if c.StartDate == nil || len(content.Body) == 0 {
+		return false
+	}
+
+	oldestPostTime, err := time.Parse(time.RFC3339, content.Body[len(content.Body)-1].PublishedDateTime)
+	return err == nil && oldestPostTime.Before(*c.StartDate)
 }
 
 // formatDateOrNil returns a formatted date string or "nil" if the date is nil

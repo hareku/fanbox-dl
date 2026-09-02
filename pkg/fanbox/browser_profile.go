@@ -90,8 +90,8 @@ func newChromeProfile(userAgent string) *BrowserProfile {
 func newFirefoxProfile(userAgent string) *BrowserProfile {
 	return &BrowserProfile{
 		Family:                BrowserFamilyFirefox,
-		TLSProfile:            profiles.Firefox_135,
-		TLSProfileName:        "firefox_135",
+		TLSProfile:            profiles.Firefox_148,
+		TLSProfileName:        "firefox_148",
 		HeaderOrder:           firefoxAPIHeaderOrder,
 		AssetHeaderOrder:      firefoxAssetHeaderOrder,
 		PseudoHeaderOrder:     []string{":method", ":authority", ":scheme", ":path"},
